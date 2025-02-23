@@ -2,9 +2,183 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>$Title$</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cookbook</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
 </head>
 <body>
-$END$
+
+<!-- Trash Button -->
+<button id="open-trash-btn">
+  <p id="open-trash-txt">
+    <span class="material-symbols-outlined">delete</span>
+  </p>
+</button>
+
+<!-- Recently Deleted Menu -->
+<div id="recently-deleted">
+  <div class="deleted-header">
+    <h2>Recently Deleted</h2>
+    <button id="clear-trash">Clear All</button>
+  </div>
+  <ul id="deleted-recipes-list"></ul>
+</div>
+
+<!-- Restore/Delete Confirmation Modal -->
+<div id="confirm-modal" class="hidden">
+  <div class="modal-content">
+    <button id="close-confirm-modal" class="close-btn">&times;</button>
+    <p id="confirm-text">Are you sure you want to delete this?</p>
+    <div class="button-group">
+      <button id="restore-btn">Restore</button>
+      <button id="delete-btn">Delete</button>
+    </div>
+  </div>
+</div>
+
+
+
+<h1 id="page-title">My Cookbook</h1>
+
+<label>
+  <span class="material-symbols-outlined">search</span>
+</label>
+<label for="search"></label>
+<input type="text" id="search" placeholder="Search recipes..." />
+
+<label for="category-filter"></label>
+<select id="category-filter">
+  <option value="all">All Categories</option>
+</select>
+
+<button id="add-recipe-btn">
+  <span class="material-symbols-outlined">add</span> Add Recipe
+</button>
+
+<div id="recipe-list"></div>
+
+<!-- View Recipe Modal -->
+<div id="view-recipe-modal" class="modal hidden">
+  <div class="view-recipe-card">
+    <button id="close-view-recipe">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+    <h2 id="view-title"></h2>
+    <p id="view-category-container"><b>Category:</b> <span id="view-category"></span></p>
+
+    <h3>Ingredients</h3>
+    <ul id="view-ingredients-list"></ul>
+
+    <h3>Instructions</h3>
+    <ul id="view-instructions-list"></ul>
+  </div>
+</div>
+
+<!-- New Recipe Modal -->
+<div id="new-recipe-modal" class="modal hidden">
+  <div class="edit-recipe-card">
+    <button id="close-new-modal" class="close-btn">&times;</button>
+    <h2>Add New Recipe</h2>
+    <label for="new-title"></label>
+    <input type="text" id="new-title" placeholder="Recipe Name">
+
+    <label for="new-category"></label>
+    <input type="text" id="new-category" placeholder="Category">
+
+    <!-- Ingredients Section -->
+    <div>
+      <h3>Ingredients</h3>
+      <ul id="new-ingredients-list"></ul>
+
+      <label for="new-ingredient-subheading"></label>
+      <input type="text" id="new-ingredient-subheading" placeholder="Add subheading">
+      <button id="add-new-ingredient-subheading">
+        <span class="material-symbols-outlined">add</span> Add Subheading
+      </button>
+
+      <label for="new-ingredient-input"></label>
+      <input type="text" id="new-ingredient-input" placeholder="Add ingredient">
+      <button id="add-new-ingredient">
+        <span class="material-symbols-outlined">add</span>
+      </button>
+    </div>
+
+    <!-- Instructions Section -->
+    <div>
+      <h3>Instructions</h3>
+      <ul id="new-instructions-list"></ul>
+
+      <label for="new-instruction-subheading"></label>
+      <input type="text" id="new-instruction-subheading" placeholder="Add subheading">
+      <button id="add-new-instruction-subheading">
+        <span class="material-symbols-outlined">add</span> Add Subheading
+      </button>
+
+      <label for="new-instruction-input"></label>
+      <input type="text" id="new-instruction-input" placeholder="Add instruction">
+      <button id="add-new-instruction">
+        <span class="material-symbols-outlined">add</span>
+      </button>
+    </div>
+
+    <button id="save-new">Save</button>
+    <button id="cancel-new">Cancel</button>
+  </div>
+</div>
+
+<!-- Edit Recipe Modal -->
+<div id="edit-recipe-modal" class="modal hidden">
+  <div class="edit-recipe-card">
+    <button id="close-edit-modal" class="close-btn">&times;</button>
+    <h2>Edit Recipe</h2>
+    <label for="edit-title"></label>
+    <input type="text" id="edit-title" placeholder="Recipe Name">
+
+    <label for="edit-category"></label>
+    <input type="text" id="edit-category" placeholder="Category">
+
+    <!-- Ingredients Section -->
+    <div>
+      <h3>Ingredients</h3>
+      <ul id="edit-ingredients-list"></ul>
+
+      <label for="edit-ingredient-subheading"></label>
+      <input type="text" id="edit-ingredient-subheading" placeholder="Add subheading">
+      <button id="add-edit-ingredient-subheading">
+        <span class="material-symbols-outlined">add</span> Add Subheading
+      </button>
+
+      <label for="edit-ingredient-input"></label>
+      <input type="text" id="edit-ingredient-input" placeholder="Add ingredient">
+      <button id="add-edit-ingredient">
+        <span class="material-symbols-outlined">add</span>
+      </button>
+    </div>
+
+    <!-- Instructions Section -->
+    <div>
+      <h3>Instructions</h3>
+      <ul id="edit-instructions-list"></ul>
+
+      <label for="edit-instruction-subheading"></label>
+      <input type="text" id="edit-instruction-subheading" placeholder="Add subheading">
+      <button id="add-edit-instruction-subheading">
+        <span class="material-symbols-outlined">add</span> Add Subheading
+      </button>
+
+      <label for="edit-instruction-input"></label>
+      <input type="text" id="edit-instruction-input" placeholder="Add instruction">
+      <button id="add-edit-instruction">
+        <span class="material-symbols-outlined">add</span>
+      </button>
+    </div>
+
+    <button id="save-edit">Save</button>
+    <button id="cancel-edit">Cancel</button>
+  </div>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>

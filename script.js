@@ -151,7 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
             instructions: { list: [...newInstructionsList.querySelectorAll("li")].map(li => li.textContent) }
         };
 
-        if (newRecipe.title && newRecipe.category && newRecipe.ingredients.list.length && newRecipe.instructions.list.length) {
+        if (newRecipe.title && newRecipe.category) {
             recipes.push(newRecipe);
             saveRecipes();
             renderRecipes();

@@ -94,6 +94,10 @@ body {
     max-width: 85%; /* Prevent it from stretching too much */
 }
 
+.recipe-card button {
+    z-index: 1000;
+}
+
 /* Buttons */
 button {
     padding: 11px 15px 11px 10px;

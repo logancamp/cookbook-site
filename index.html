@@ -8,7 +8,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
 </head>
 <body>
-
 <!-- Trash Button -->
 <button id="open-trash-btn">
   <p id="open-trash-txt">
@@ -22,8 +21,9 @@
     <h2>Recently Deleted</h2>
 
     <button id="clear-trash" class="deleted-header" data-text="Delete All">
-      <span>Delete All</span> <!-- This will be hidden -->
+      <span>Delete All</span>
     </button>
+    <span class="material-symbols-outlined hidden" id="check-icon">check</span>
 
   </div>
   <ul id="deleted-recipes-list"></ul>
@@ -46,7 +46,7 @@
 <h1 id="page-title">My Cookbook</h1>
 
 <label>
-  <span class="material-symbols-outlined">search</span>
+  <span class="material-symbols-outlined search-icon">search</span>
 </label>
 <label for="search"></label>
 <input type="text" id="search" placeholder="Search recipes..." />

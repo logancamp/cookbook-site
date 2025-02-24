@@ -9,8 +9,15 @@ body {
     margin-top: 50px;
 }
 
+.search-icon {
+    position: relative;
+    left: 20px;
+}
+
 /* Search & Filter Inputs */
 #search, #category-filter {
+    position: relative;
+    left: 20px;
     border: lightgray solid 1px;
 }
 
@@ -366,6 +373,16 @@ button .material-symbols-outlined {
     transform: scaleY(1.2); /* Slightly enlarges the item */
 }
 
+/* Hide check mark initially */
+#check-icon {
+    position: relative;
+    bottom: 33px;
+    left: 90px;
+    font-size: 1.5em;
+    color: white; /* Matches text color */
+    z-index: 3;
+}
+
 /* Restore/Delete Confirmation Modal */
 #confirm-modal {
     position: fixed;
@@ -449,4 +466,5 @@ button .material-symbols-outlined {
 .hidden {
     visibility: hidden;
     opacity: 0;
+    transition: opacity 0.5s ease-in-out;
 }

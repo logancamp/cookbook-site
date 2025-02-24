@@ -39,6 +39,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const recentlyDeleted = document.getElementById("recently-deleted");
     const deletedListEl = document.getElementById("deleted-recipes-list");
     const clearTrashBtn = document.getElementById("clear-trash");
+    const clearTrashIcon = document.getElementById("check-icon");
+
     const confirmModal = document.getElementById("confirm-modal");
     const confirmText = document.getElementById("confirm-text");
     const restoreBtn = document.getElementById("restore-btn");
@@ -298,16 +300,36 @@ document.addEventListener("DOMContentLoaded", () => {
         event.stopPropagation(); // Stops the click from bubbling up
     });
 
-    clearTrashBtn.addEventListener("click", () => {
-        clearTrashBtn.classList.add("active"); // Start the animation
-        setTimeout(() => {
-            clearTrashBtn.classList.remove("active");
-        }, 2500); // Match CSS transition duration (2.5s)
-    });
+    let isConfirming = false; // Track if we're waiting for confirmation
+    let confirmTimeout; // Store timeout ID for reset
 
-    // deletedRecipes = [];
-    // saveDeletedRecipes();
-    // renderDeletedRecipes();
+    clearTrashBtn.addEventListener("click", () => {
+        if (!isConfirming && deletedRecipes.length !== 0) {
+            // First click: Start confirmation mode
+            isConfirming = true;
+            clearTrashBtn.classList.add("active");
+            clearTrashIcon.classList.remove("hidden");
+
+            // Set a timeout to reset confirmation if second click doesn’t happen
+            confirmTimeout = setTimeout(() => {
+                isConfirming = false;
+                clearTrashBtn.classList.remove("active");
+                clearTrashIcon.classList.add("hidden");
+            }, 2500); // Reset after 2.5s (matches CSS transition)
+
+        } else {
+            // Second click: Confirm and delete all
+            clearTimeout(confirmTimeout); // Prevent timeout from resetting it
+            deletedRecipes = [];
+            saveDeletedRecipes();
+            renderDeletedRecipes();
+
+            // Reset everything
+            isConfirming = false;
+            clearTrashBtn.classList.remove("active");
+            clearTrashIcon.classList.add("hidden");
+        }
+    });
 
     deletedListEl.addEventListener("click", (event) => {
         const items = [...deletedListEl.children]; // Get fresh list of deleted items

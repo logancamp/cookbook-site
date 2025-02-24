@@ -280,9 +280,65 @@ button .material-symbols-outlined {
     padding-top: 20px;
     margin-bottom: 0;
 }
+
 .deleted-header #clear-trash {
-    background-color: lightgray;
+    position: relative;
+    display: inline-block;
+    padding: 12px 24px;
+    font-size: 16px;
+    color: black; /* Default text color */
+    background-color: lightgray; /* Default background */
+    border: none;
+    cursor: pointer;
     width: 90%;
+    text-align: center; /* Start centered */
+    overflow: hidden;
+    transition: color 0.4s ease-in-out;
+}
+
+/* Hide original text inside the button */
+.deleted-header #clear-trash span {
+    visibility: hidden;
+}
+
+/* Pseudo-element for animated text */
+.deleted-header #clear-trash::before {
+    content: attr(data-text);
+    position: absolute;
+    top: 50%;
+    left: 50%; /* Start centered */
+    transform: translate(-50%, -50%); /* Center the text */
+    z-index: 2;
+    color: inherit;
+    transition: left 0.4s ease-in-out, transform 0.4s ease-in-out; /* Smooth movement */
+}
+
+/* Sliding red background */
+.deleted-header #clear-trash::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 100%; /* Start fully hidden */
+    width: 100%;
+    height: 100%;
+    background-color: #ef2b3d;
+    transition: left 0.4s ease-in-out;
+    z-index: 1;
+}
+
+/* Active state */
+.deleted-header #clear-trash.active::after {
+    left: 0; /* Slide red background in */
+}
+
+.deleted-header #clear-trash.active::before {
+    left: 10%; /* Move text left */
+    transform: translate(0, -50%); /* Stop centering */
+}
+
+.deleted-header #clear-trash.active {
+    color: white;
+    text-align: left; /* Align button text to the left */
 }
 
 #deleted-recipes-list {

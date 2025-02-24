@@ -46,6 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let deletedRecipes = JSON.parse(localStorage.getItem("deletedRecipes")) || [];
     confirmModal.classList.add("hidden");
+    clearTrashBtn.classList.remove("active");
 
     function saveRecipes() {
         localStorage.setItem("recipes", JSON.stringify(recipes));
@@ -193,6 +194,7 @@ document.addEventListener("DOMContentLoaded", () => {
         confirmText.textContent = `Do you want to restore or delete "${deletedRecipes[index].title}"?`;
 
         confirmModal.classList.remove("hidden");
+        clearTrashBtn.classList.remove("active");
         recentlyDeleted.classList.remove("open");
     }
 
@@ -286,6 +288,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("click", (event) => {
         if (!recentlyDeleted.contains(event.target)) {
             recentlyDeleted.classList.remove("open");
+            clearTrashBtn.classList.remove("active");
             console.log("Clicked outside, closing menu.");
         }
     });
@@ -296,10 +299,15 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     clearTrashBtn.addEventListener("click", () => {
-        deletedRecipes = [];
-        saveDeletedRecipes();
-        renderDeletedRecipes();
+        clearTrashBtn.classList.add("active"); // Start the animation
+        setTimeout(() => {
+            clearTrashBtn.classList.remove("active");
+        }, 2500); // Match CSS transition duration (2.5s)
     });
+
+    // deletedRecipes = [];
+    // saveDeletedRecipes();
+    // renderDeletedRecipes();
 
     deletedListEl.addEventListener("click", (event) => {
         const items = [...deletedListEl.children]; // Get fresh list of deleted items

@@ -58,6 +58,13 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem("deletedRecipes", JSON.stringify(deletedRecipes));
     }
 
+    function renderRecipeSection(section) {
+        return section.map(({ subheading, items }) => `
+        <p class="subheading new-recipe"><strong>${subheading}</strong></p>
+        <ul>${items.map(item => `<li>${item}</li>`).join("")}</ul>
+    `).join("");
+    }
+
     function renderRecipes() {
         recipeListEl.innerHTML = recipes
             .map(recipe => `
@@ -67,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <p>${recipe.category}</p>
             </div>
             <p id="ingredients-title"><b>Ingredients:</b></p>
-            <ul>${recipe.ingredients.list.map(ing => `<li>${ing}</li>`).join("")}</ul>
+            ${renderRecipeSection(recipe.ingredients)}
             <button class="edit-btn">
                 <span class="material-symbols-outlined">edit</span> Edit
             </button>
@@ -107,22 +114,53 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function addItem(inputEl, listEl) {
+    function addItemWithSubheading(inputEl, subheadingEl, listEl) {
         const value = inputEl.value.trim();
+        const subheading = subheadingEl.value.trim();
+
+        if (subheading && ![...listEl.children].some(div => div.dataset.subheading === subheading)) {
+            // Add subheading as a separate <div>, not inside <li>
+            const section = document.createElement("div");
+            section.dataset.subheading = subheading;
+            section.classList.add("subheading-container");
+            section.innerHTML = `<p class="subheading"><strong>${subheading}</strong></p><ul></ul>`;
+            listEl.appendChild(section);
+            subheadingEl.value = ""; // Clear subheading input
+        }
+
         if (value) {
-            const li = document.createElement("li");
-            li.textContent = value;
-            li.addEventListener("click", () => li.remove());
-            listEl.appendChild(li);
-            inputEl.value = "";
+            let section = [...listEl.children].find(div => div.dataset.subheading === subheading);
+            if (!section) {
+                console.warn("No subheading found, adding item to General section.");
+                section = document.createElement("div");
+                section.dataset.subheading = "General";
+                section.classList.add("subheading-container");
+                section.innerHTML = `<p class="subheading"><strong>General</strong></p><ul></ul>`;
+                listEl.appendChild(section);
+            }
+
+            const itemEl = document.createElement("li");
+            itemEl.textContent = value;
+            itemEl.addEventListener("click", () => itemEl.remove());
+
+            section.querySelector("ul").appendChild(itemEl);
+            inputEl.value = ""; // Clear item input
         }
     }
 
-    addNewIngredientBtn.addEventListener("click", () => addItem(newIngredientInput, newIngredientsList));
-    addNewInstructionBtn.addEventListener("click", () => addItem(newInstructionInput, newInstructionsList));
+    addNewIngredientBtn.addEventListener("click", () =>
+        addItemWithSubheading(newIngredientInput, document.getElementById("new-ingredient-subheading"), newIngredientsList)
+    );
+    addNewInstructionBtn.addEventListener("click", () =>
+        addItemWithSubheading(newInstructionInput, document.getElementById("new-instruction-subheading"), newInstructionsList)
+    );
 
-    addEditIngredientBtn.addEventListener("click", () => addItem(editIngredientInput, editIngredientsList));
-    addEditInstructionBtn.addEventListener("click", () => addItem(editInstructionInput, editInstructionsList));
+    addEditIngredientBtn.addEventListener("click", () =>
+        addItemWithSubheading(editIngredientInput, document.getElementById("edit-ingredient-subheading"), editIngredientsList)
+    );
+    addEditInstructionBtn.addEventListener("click", () =>
+        addItemWithSubheading(editInstructionInput, document.getElementById("edit-instruction-subheading"), editInstructionsList)
+    );
 
     function openNewRecipeModal() {
         newTitleEl.value = "";
@@ -143,12 +181,19 @@ document.addEventListener("DOMContentLoaded", () => {
             .join("");
     }
 
+    function extractSubheadingData(listEl) {
+        return [...listEl.children].map(section => ({
+            subheading: section.dataset.subheading || "",
+            items: [...section.querySelectorAll("ul li")].map(li => li.textContent)
+        }));
+    }
+
     function saveNewRecipe() {
         const newRecipe = {
             title: newTitleEl.value.trim(),
             category: newCategoryEl.value.trim(),
-            ingredients: { list: [...newIngredientsList.querySelectorAll("li")].map(li => li.textContent) },
-            instructions: { list: [...newInstructionsList.querySelectorAll("li")].map(li => li.textContent) }
+            ingredients: extractSubheadingData(newIngredientsList),
+            instructions: extractSubheadingData(newInstructionsList)
         };
 
         if (newRecipe.title && newRecipe.category) {
@@ -166,10 +211,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
         editTitleEl.value = recipe.title;
         editCategoryEl.value = recipe.category;
-        editIngredientsList.innerHTML = recipe.ingredients.list.map(ing => `<li>${ing}</li>`).join("");
-        editInstructionsList.innerHTML = recipe.instructions.list.map(ins => `<li>${ins}</li>`).join("");
+        editIngredientsList.innerHTML = renderEditList(recipe.ingredients);
+        editInstructionsList.innerHTML = renderEditList(recipe.instructions);
 
         editModal.classList.remove("hidden");
+    }
+
+    // Helper function to render the edit list with subheadings
+    function renderEditList(sections) {
+        return sections.map(({ subheading, items }) => `
+        <div class="subheading-container">
+            <p class="subheading edit-recipe"><strong>${subheading}</strong></p>
+            <ul>${items.map(item => `<li>${item}</li>`).join("")}</ul>
+        </div>
+    `).join("");
     }
 
     function closeEditModal() {
@@ -181,8 +236,8 @@ document.addEventListener("DOMContentLoaded", () => {
             recipes[editIndex] = {
                 title: editTitleEl.value.trim(),
                 category: editCategoryEl.value.trim(),
-                ingredients: { list: [...editIngredientsList.querySelectorAll("li")].map(li => li.textContent) },
-                instructions: { list: [...editInstructionsList.querySelectorAll("li")].map(li => li.textContent) }
+                ingredients: extractSubheadingData(editIngredientsList),
+                instructions: extractSubheadingData(editInstructionsList),
             };
             saveRecipes();
             renderRecipes();
@@ -201,9 +256,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function openViewRecipeModal(index, isDeleted = false) {
-        const list = isDeleted ? deletedRecipes : recipes; // Choose the correct list
+        const list = isDeleted ? deletedRecipes : recipes; // Use deletedRecipes if viewing trash
         console.log(`Opening modal for ${isDeleted ? "deleted" : "active"} recipe at index: ${index}`);
-        console.log(`${isDeleted ? "Deleted" : "Active"} recipes list:`, list.map(r => r.title));
 
         if (!list[index]) {
             console.error("Invalid index access in view modal:", index);
@@ -214,12 +268,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
         document.getElementById("view-title").textContent = recipe.title;
         document.getElementById("view-category").textContent = recipe.category;
-        document.getElementById("view-ingredients-list").innerHTML =
-            recipe.ingredients.list.map(ing => `<li>${ing}</li>`).join("");
-        document.getElementById("view-instructions-list").innerHTML =
-            recipe.instructions.list.map(ins => `<li>${ins}</li>`).join("");
+        document.getElementById("view-ingredients-list").innerHTML = renderViewList(recipe.ingredients);
+        document.getElementById("view-instructions-list").innerHTML = renderViewList(recipe.instructions);
 
         document.getElementById("view-recipe-modal").classList.remove("hidden");
+    }
+
+    // Helper function to render view list with subheadings
+    function renderViewList(sections) {
+        return sections.map(({ subheading, items }) => `
+        <p class="subheading"><strong>${subheading}</strong></p>
+        <ul>${items.map(item => `<li>${item}</li>`).join("")}</ul>
+    `).join("");
     }
 
     function deleteRecipe(index) {

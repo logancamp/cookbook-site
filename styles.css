@@ -211,11 +211,25 @@ button .material-symbols-outlined {
     text-align: center;
 }
 
+.subheading,
 .edit-recipe-card ul li,
 .view-recipe-card ul li {
     word-wrap: break-word; /* Break long words */
     overflow-wrap: break-word; /* Ensure proper wrapping */
     hyphens: auto; /* Add hyphens where applicable */
+}
+
+.edit-recipe,
+.new-recipe,
+.edit-recipe-card ul li,
+.new-recipe-card ul li{
+    margin-left: -50px;
+}
+
+.edit-recipe,
+.new-recipe,
+.subheading {
+    margin-top: -10px;
 }
 
 .recipe-card ul,
@@ -236,8 +250,13 @@ button .material-symbols-outlined {
 /* Style for subheadings inside lists */
 .subheading {
     font-weight: bold;
-    font-size: 1em;
-    margin-top: 10px;
+    font-size: 1.2em;
+    margin-bottom: 5px;
+    text-align: left;
+}
+
+ul {
+    margin-left: 20px;
 }
 
 /* Save & Cancel Buttons in Modals */
@@ -357,9 +376,11 @@ button .material-symbols-outlined {
 }
 
 #deleted-recipes-list li {
+    position: relative;
+    right: 8px;
     background: #ddd;
     padding: 12px;
-    margin: 5px 0; /* Keeps spacing between items */
+    margin: 3px 0; /* Keeps spacing between items */
     cursor: pointer;
     transition: all 0.2s ease-in-out;
     overflow: hidden;
@@ -374,7 +395,7 @@ button .material-symbols-outlined {
     width: 100%;
     white-space: normal;
     background: #ccc;
-    transform: scaleY(1.2); /* Slightly enlarges the item */
+    transform: scaleY(1.1); /* Slightly enlarges the item */
 }
 
 /* Hide check mark initially */

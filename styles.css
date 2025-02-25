@@ -426,7 +426,7 @@ ul {
     width: 100%;
     white-space: normal;
     background: #ccc;
-    transform: scaleY(1.1); /* Slightly enlarges the item */
+    transform: scaleY(1.2); /* Slightly enlarges the item */
 }
 
 /* Hide check mark initially */

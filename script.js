@@ -2,35 +2,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const recipeListEl = document.getElementById("recipe-list");
     const searchInput = document.getElementById("search");
     const categoryFilter = document.getElementById("category-filter");
-    const addRecipeBtn = document.getElementById("add-recipe-btn");
 
-    // Modals
-    const newRecipeModal = document.getElementById("new-recipe-modal");
-    const editModal = document.getElementById("edit-recipe-modal");
-
-    // New Recipe Inputs
-    const newTitleEl = document.getElementById("new-title");
-    const newCategoryEl = document.getElementById("new-category");
-    const newIngredientsList = document.getElementById("new-ingredients-list");
-    const newIngredientInput = document.getElementById("new-ingredient-input");
-    const addNewIngredientBtn = document.getElementById("add-new-ingredient");
-    const newInstructionsList = document.getElementById("new-instructions-list");
-    const newInstructionInput = document.getElementById("new-instruction-input");
-    const addNewInstructionBtn = document.getElementById("add-new-instruction");
-    const saveNewBtn = document.getElementById("save-new");
-    const cancelNewBtn = document.getElementById("cancel-new");
-
-    // Edit Recipe Inputs
-    const editTitleEl = document.getElementById("edit-title");
-    const editCategoryEl = document.getElementById("edit-category");
-    const editIngredientsList = document.getElementById("edit-ingredients-list");
-    const editIngredientInput = document.getElementById("edit-ingredient-input");
-    const addEditIngredientBtn = document.getElementById("add-edit-ingredient");
-    const editInstructionsList = document.getElementById("edit-instructions-list");
-    const editInstructionInput = document.getElementById("edit-instruction-input");
-    const addEditInstructionBtn = document.getElementById("add-edit-instruction");
-    const saveEditBtn = document.getElementById("save-edit");
-    const cancelEditBtn = document.getElementById("cancel-edit");
+    // Recipe Inputs
+    const recipeModal = document.getElementById("recipe-modal");
+    const modalTitle = document.getElementById("recipe-modal-title");
+    const recipeTitleEl = document.getElementById("recipe-title");
+    const recipeCategoryEl = document.getElementById("recipe-category");
+    const recipeIngredientsList = document.getElementById("recipe-ingredients-list");
+    const recipeInstructionsList = document.getElementById("recipe-instructions-list");
+    const addRecipeIngredientBtn = document.getElementById("add-recipe-ingredient");
+    const addRecipeInstructionBtn = document.getElementById("add-recipe-instruction");
+    const saveRecipeBtn = document.getElementById("save-recipe");
+    const cancelRecipeBtn = document.getElementById("cancel-recipe");
 
     let recipeData = JSON.parse(localStorage.getItem("recipeData")) || { recipes: [] };
     let editIndex = null;
@@ -51,6 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
     clearTrashBtn.classList.remove("active");
 
     function saveRecipes() {
+        console.log("💾 Saving recipes to localStorage:", recipeData.recipes);
         localStorage.setItem("recipeData", JSON.stringify(recipeData));
     }
 
@@ -71,44 +55,35 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderRecipes() {
-        const searchTerm = searchInput.value.toLowerCase();
-        const selectedCategory = categoryFilter.value.toLowerCase();
+        console.log("🔄 Rendering recipes...");
+        recipeListEl.innerHTML = ""; // ✅ Clear before re-rendering
 
-        recipeListEl.innerHTML = ""; // Clear list before rendering
+        recipeData.recipes.forEach((recipe, index) => {
+            const recipeCard = document.createElement("div");
+            recipeCard.classList.add("recipe-card");
 
-        recipeData.recipes
-            .filter(recipe =>
-                (selectedCategory === "all" || recipe.category.toLowerCase() === selectedCategory) &&
-                (recipe.title.toLowerCase().includes(searchTerm) ||
-                    recipe.sections.some(section => section.items.some(item => item.toLowerCase().includes(searchTerm))))
-            )
-            .forEach((recipe, index) => {
-                const recipeCard = document.createElement("div");
-                recipeCard.classList.add("recipe-card");
+            recipeCard.innerHTML = `
+            <div class="render-title">
+                <h3>${recipe.title}</h3>
+                <p>${recipe.category}</p>
+            </div>
+            <p id="ingredients-title"><b>Ingredients:</b></p>
+            <div class="ingredients-container">${renderRecipeSection(recipe.sections)}</div>
+            <button class="edit-btn">
+                <span class="material-symbols-outlined">edit</span> Edit
+            </button>
+            <button class="delete-btn">
+                <span class="material-symbols-outlined">delete</span> Delete
+            </button>
+        `;
 
-                recipeCard.innerHTML = `
-                <div class="render-title">
-                    <h3>${recipe.title}</h3>
-                    <p>${recipe.category}</p>
-                </div>
-                <p id="ingredients-title"><b>Ingredients:</b></p>
-                <div class="ingredients-container">${renderRecipeSection(recipe.sections)}</div>
-                <button class="edit-btn">
-                    <span class="material-symbols-outlined">edit</span> Edit
-                </button>
-                <button class="delete-btn">
-                    <span class="material-symbols-outlined">delete</span> Delete
-                </button>
-            `;
+            recipeCard.querySelector(".edit-btn").addEventListener("click", () => openRecipeModal(index));
+            recipeCard.querySelector(".delete-btn").addEventListener("click", () => deleteRecipe(index));
 
-                // Add event listeners for edit and delete
-                recipeCard.querySelector(".edit-btn").addEventListener("click", () => openEditModal(index));
-                recipeCard.querySelector(".delete-btn").addEventListener("click", () => deleteRecipe(index));
+            recipeListEl.appendChild(recipeCard);
+        });
 
-                recipeListEl.appendChild(recipeCard);
-            });
-
-        console.log("✅ Rendered Recipes:", recipeData.recipes);
+        console.log("✅ Updated Recipe List:", recipeData.recipes);
     }
 
     function removeOldRecipes() {
@@ -193,31 +168,12 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("Updated Recipes:", recipeData.recipes);
     }
 
-    addNewIngredientBtn.addEventListener("click", () =>
-        addItemWithSubheading(newIngredientInput, document.getElementById("new-ingredient-subheading"), newIngredientsList)
+    addRecipeIngredientBtn.addEventListener("click", () =>
+        addItemWithSubheading(document.getElementById("recipe-ingredient-input"), document.getElementById("recipe-ingredient-subheading"), recipeIngredientsList)
     );
-    addNewInstructionBtn.addEventListener("click", () =>
-        addItemWithSubheading(newInstructionInput, document.getElementById("new-instruction-subheading"), newInstructionsList)
+    addRecipeInstructionBtn.addEventListener("click", () =>
+        addItemWithSubheading(document.getElementById("recipe-instruction-input"), document.getElementById("recipe-instruction-subheading"), recipeInstructionsList)
     );
-
-    addEditIngredientBtn.addEventListener("click", () =>
-        addItemWithSubheading(editIngredientInput, document.getElementById("edit-ingredient-subheading"), editIngredientsList)
-    );
-    addEditInstructionBtn.addEventListener("click", () =>
-        addItemWithSubheading(editInstructionInput, document.getElementById("edit-instruction-subheading"), editInstructionsList)
-    );
-
-    function openNewRecipeModal() {
-        newTitleEl.value = "";
-        newCategoryEl.value = "";
-        newIngredientsList.innerHTML = "";
-        newInstructionsList.innerHTML = "";
-        newRecipeModal.classList.remove("hidden");
-    }
-
-    function closeNewRecipeModal() {
-        newRecipeModal.classList.add("hidden");
-    }
 
     function updateCategoryFilter() {
         const categories = ["all", ...new Set(recipeData.recipes.map(r => r.category))];
@@ -226,147 +182,101 @@ document.addEventListener("DOMContentLoaded", () => {
             .join("");
     }
 
-    function extractSubheadingData(listEl, fallbackData = []) {
-        let sections = fallbackData.length ? [...fallbackData] : [];
+    function extractSubheadingData(listEl) {
+        let sections = [];
 
         [...listEl.children].forEach(section => {
             console.log("🔍 Section HTML:", section.innerHTML);
 
-            let subheading = "Untitled";
+            let subheading = "Untitled"; // Default subheading
             let subheadingEl = section.querySelector(".subheading strong") || section.querySelector("strong");
 
             if (subheadingEl) {
                 subheading = subheadingEl.textContent.trim();
             }
 
-            console.log("🔵 Extracted Subheading:", subheading);
-
-            const items = [...section.querySelectorAll("ul li")].map(li => li.textContent.trim());
-
-            let existingSection = sections.find(s => s.subheading.toLowerCase() === subheading.toLowerCase());
-
-            if (!items.length && !existingSection) {
-                console.warn(`⚠️ Skipping empty section: ${subheading}`);
-                return;
+            // ✅ Fix: Only extract items from **this** subheading's list
+            let items = [];
+            let listEl = section.querySelector("ul");
+            if (listEl) {
+                items = [...listEl.querySelectorAll("li")].map(li => li.textContent.trim());
             }
 
-            if (existingSection) {
-                existingSection.items = [...new Set([...existingSection.items, ...items])];
-            } else {
-                sections.push({ subheading, items });
+            if (!items.length) {
+                console.warn(`⚠️ Keeping empty section: ${subheading}`);
             }
+
+            sections.push({ subheading, items });
         });
-
-        if (sections.length === 0 && fallbackData.length > 0) {
-            console.warn("⚠️ No sections found in UI, keeping fallback data.");
-            return fallbackData;
-        }
 
         console.log("✅ Extracted Sections (Corrected):", sections);
         return sections;
     }
 
-    function saveNewRecipe() {
-        const newRecipe = {
-            title: newTitleEl.value.trim(),
-            category: newCategoryEl.value.trim(),
-            sections: extractSubheadingData(newIngredientsList),
-            instructions: extractSubheadingData(newInstructionsList)
-        };
-
-        recipeData.recipes.push(newRecipe);
-        saveRecipes();
-        renderRecipes();
-        closeNewRecipeModal();
-    }
-
-    function openEditModal(index) {
+    // Open Modal (Handles both New and Edit)
+    function openRecipeModal(index = null) {
         editIndex = index;
-        const recipe = recipeData.recipes[index];
 
-        if (!recipe) {
-            console.error("❌ Error: No recipe found at index", index);
-            return;
+        if (index === null) {
+            console.log("🆕 Opening modal for NEW recipe");
+            modalTitle.textContent = "Add Recipe";
+            recipeTitleEl.value = "";
+            recipeCategoryEl.value = "";
+            recipeIngredientsList.innerHTML = "";
+            recipeInstructionsList.innerHTML = "";
+        } else {
+            console.log(`🛠 Opening modal for EDIT at index: ${index}`);
+            modalTitle.textContent = "Edit Recipe";
+
+            const recipe = recipeData.recipes[index];
+
+            if (!recipe) {
+                console.error("❌ Error: No recipe found at index", index);
+                return;
+            }
+
+            recipeTitleEl.value = recipe.title;
+            recipeCategoryEl.value = recipe.category;
+            recipeIngredientsList.innerHTML = renderEditList(recipe.sections || []);
+            recipeInstructionsList.innerHTML = renderEditList(recipe.instructions || []);
         }
 
-        console.log("🛠 Opening edit modal for:", recipe.title);
-
-        editTitleEl.value = recipe.title;
-        editCategoryEl.value = recipe.category;
-
-        // ✅ Ensure ingredients and instructions exist
-        const ingredientsList = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
-        const instructionsList = Array.isArray(recipe.instructions) ? recipe.instructions : [];
-
-        editIngredientsList.innerHTML = renderEditList(ingredientsList);
-        editInstructionsList.innerHTML = renderEditList(instructionsList);
-
-        editModal.classList.remove("hidden");
+        recipeModal.classList.remove("hidden");
     }
 
     // Helper function to render the edit list with subheadings
     function renderEditList(sections) {
-        if (!Array.isArray(sections)) {
-            console.error("❌ renderEditList() expected an array but got:", sections);
-            sections = []; // ✅ Fallback to an empty array
-        }
-
         return sections.map(({ subheading, items }) => `
-        ${subheading ? `<p class="subheading"><strong>${subheading}</strong></p>` : ""}
-        <ul>${items.map(item => `<li>${item}</li>`).join("")}</ul>
+        <div class="subheading-container">
+            <p class="subheading"><strong>${subheading || "Untitled"}</strong></p>
+            <ul>${items.map(item => `<li>${item}</li>`).join("")}</ul>
+        </div>
     `).join("");
     }
 
-    function closeEditModal() {
-        editModal.classList.add("hidden");
+    function closeRecipeModal() {
+        recipeModal.classList.add("hidden");
     }
 
-    function saveEdit() {
+    function saveRecipe() {
+        const newRecipe = {
+            title: recipeTitleEl.value.trim(),
+            category: recipeCategoryEl.value.trim(),
+            sections: extractSubheadingData(recipeIngredientsList) || [],
+            instructions: extractSubheadingData(recipeInstructionsList) || []
+        };
+
         if (editIndex !== null && recipeData.recipes[editIndex]) {
-            console.log("Editing recipe at index:", editIndex);
-
-            const editedRecipe = {
-                title: editTitleEl.value.trim(),
-                category: editCategoryEl.value.trim(),
-                sections: extractSubheadingData(editIngredientsList, recipeData.recipes[editIndex].sections),
-                instructions: extractSubheadingData(editInstructionsList, recipeData.recipes[editIndex].instructions),
-            };
-
-            console.log("🟡 Extracted Sections Before Merge:", editedRecipe.sections);
-
-            recipeData.recipes[editIndex].sections = mergeSubheadingUpdates(recipeData.recipes[editIndex].sections, editedRecipe.sections);
-            recipeData.recipes[editIndex].instructions = mergeSubheadingUpdates(recipeData.recipes[editIndex].instructions, editedRecipe.instructions);
-
-            console.log("✅ Final Sections After Merge (Corrected):", recipeData.recipes[editIndex].sections);
-
-            saveRecipes();
-            renderRecipes();
-            closeEditModal();
-        } else {
-            console.error("❌ Error: editIndex is null or recipe does not exist.");
-        }
-    }
-
-    function mergeSubheadingUpdates(originalSections, newSections) {
-        if (!originalSections || !Array.isArray(originalSections)) {
-            console.warn("⚠️ Original sections were undefined, using new sections.");
-            return newSections;
+            console.log(`🗑️ Deleting old recipe at index: ${editIndex}`);
+            recipeData.recipes.splice(editIndex, 1); // ✅ Remove the old recipe
         }
 
-        let mergedSections = [...originalSections];
+        console.log("➕ Adding edited recipe as a new entry");
+        recipeData.recipes.push(newRecipe); // ✅ Add the edited recipe as a new one
 
-        newSections.forEach(newSection => {
-            let existingSection = mergedSections.find(s => s.subheading.toLowerCase() === newSection.subheading.toLowerCase());
-
-            if (existingSection) {
-                existingSection.items = [...new Set([...existingSection.items, ...newSection.items])];
-            } else {
-                mergedSections.push(newSection);
-            }
-        });
-
-        console.log("✅ Merged Sections:", mergedSections);
-        return mergedSections;
+        saveRecipes();
+        renderRecipes();
+        closeRecipeModal();
     }
 
     function confirmAction(index) {
@@ -384,25 +294,31 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log(`Opening modal for ${isDeleted ? "deleted" : "active"} recipe at index: ${index}`);
 
         if (!list[index]) {
-            console.error("Invalid index access in view modal:", index);
+            console.error("❌ Invalid index access in view modal:", index);
             return;
         }
 
         const recipe = list[index];
 
+        // ✅ Fix: Ensure sections exist before rendering to avoid `undefined.map` errors
         document.getElementById("view-title").textContent = recipe.title;
         document.getElementById("view-category").textContent = recipe.category;
-        document.getElementById("view-ingredients-list").innerHTML = renderViewList(recipe.ingredients);
-        document.getElementById("view-instructions-list").innerHTML = renderViewList(recipe.instructions);
+        document.getElementById("view-ingredients-list").innerHTML = renderViewList(recipe.sections || []);
+        document.getElementById("view-instructions-list").innerHTML = renderViewList(recipe.instructions || []);
 
         document.getElementById("view-recipe-modal").classList.remove("hidden");
     }
 
     // Helper function to render view list with subheadings
     function renderViewList(sections) {
+        if (!Array.isArray(sections)) {
+            console.error("❌ renderViewList() expected an array but got:", sections);
+            return ""; // ✅ Prevents `undefined.map` crash
+        }
+
         return sections.map(({ subheading, items }) => `
-        <p class="subheading"><strong>${subheading}</strong></p>
-        <ul>${items.map(item => `<li>${item}</li>`).join("")}</ul>
+        <p class="subheading"><strong>${subheading || ""}</strong></p>
+        <ul>${(items || []).map(item => `<li>${item}</li>`).join("")}</ul>
     `).join("");
     }
 
@@ -428,10 +344,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!card) return;
 
         const index = [...recipeListEl.children].indexOf(card);
-        console.log(`Clicked card index: ${index}, Title: ${recipeData.recipes[index]?.title}`);
 
         if (e.target.closest(".edit-btn")) {
-            openEditModal(index);
+            openRecipeModal(index); // ✅ NOW USES THE UNIFIED MODAL
         } else if (e.target.closest(".delete-btn")) {
             deleteRecipe(index);
         } else {
@@ -453,16 +368,10 @@ document.addEventListener("DOMContentLoaded", () => {
     searchInput.addEventListener("input", renderRecipes);
     categoryFilter.addEventListener("change", renderRecipes);
 
-    // Modal Button Events
-    saveEditBtn.addEventListener("click", saveEdit);
-    cancelEditBtn.addEventListener("click", closeEditModal);
-
-    addRecipeBtn.addEventListener("click", openNewRecipeModal);
-    saveNewBtn.addEventListener("click", saveNewRecipe);
-    cancelNewBtn.addEventListener("click", closeNewRecipeModal);
-
-    document.getElementById("close-edit-modal").addEventListener("click", closeEditModal);
-    document.getElementById("close-new-modal").addEventListener("click", closeNewRecipeModal);
+    document.getElementById("add-recipe-btn").addEventListener("click", () => openRecipeModal());
+    saveRecipeBtn.addEventListener("click", saveRecipe);
+    cancelRecipeBtn.addEventListener("click", closeRecipeModal);
+    document.getElementById("close-recipe-modal").addEventListener("click", closeRecipeModal);
 
     openTrashBtn.addEventListener("click", (event) => {
         event.stopPropagation(); // Prevent this click from triggering the outside click event

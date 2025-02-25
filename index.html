@@ -79,27 +79,28 @@
   </div>
 </div>
 
-<!-- New Recipe Modal -->
-<div id="new-recipe-modal" class="modal hidden">
+<!-- Unified Recipe Modal (Replaces New & Edit Modals) -->
+<div id="recipe-modal" class="modal hidden">
   <div class="edit-recipe-card">
-    <button id="close-new-modal" class="close-btn">&times;</button>
-    <h2>Add New Recipe</h2>
-    <label for="new-title"></label>
-    <input type="text" id="new-title" placeholder="Recipe Name">
+    <button id="close-recipe-modal" class="close-btn">&times;</button>
+    <h2 id="recipe-modal-title">Add Recipe</h2>
 
-    <label for="new-category"></label>
-    <input type="text" id="new-category" placeholder="Category">
+    <label for="recipe-title"></label>
+    <input type="text" id="recipe-title" placeholder="Recipe Name">
+
+    <label for="recipe-category"></label>
+    <input type="text" id="recipe-category" placeholder="Category">
 
     <!-- Ingredients Section -->
     <div>
       <h3>Ingredients</h3>
-      <ul id="new-ingredients-list"></ul>
+      <ul id="recipe-ingredients-list"></ul>
 
-      <label for="new-ingredient-subheading"></label>
-      <input type="text" id="new-ingredient-subheading" placeholder="Subheading:">
-      <label for="new-ingredient-input"></label>
-      <input type="text" id="new-ingredient-input" placeholder="Add ingredient">
-      <button id="add-new-ingredient">
+      <label for="recipe-ingredient-subheading"></label>
+      <input type="text" id="recipe-ingredient-subheading" placeholder="Subheading:">
+      <label for="recipe-ingredient-input"></label>
+      <input type="text" id="recipe-ingredient-input" placeholder="Add ingredient">
+      <button id="add-recipe-ingredient">
         <span class="material-symbols-outlined">add</span>
       </button>
     </div>
@@ -107,63 +108,19 @@
     <!-- Instructions Section -->
     <div>
       <h3>Instructions</h3>
-      <ul id="new-instructions-list"></ul>
+      <ul id="recipe-instructions-list"></ul>
 
-      <label for="new-instruction-subheading"></label>
-      <input type="text" id="new-instruction-subheading" placeholder="Subheading:">
-      <label for="new-instruction-input"></label>
-      <input type="text" id="new-instruction-input" placeholder="Add instruction">
-      <button id="add-new-instruction">
+      <label for="recipe-instruction-subheading"></label>
+      <input type="text" id="recipe-instruction-subheading" placeholder="Subheading:">
+      <label for="recipe-instruction-input"></label>
+      <input type="text" id="recipe-instruction-input" placeholder="Add instruction">
+      <button id="add-recipe-instruction">
         <span class="material-symbols-outlined">add</span>
       </button>
     </div>
 
-    <button id="save-new">Save</button>
-    <button id="cancel-new">Cancel</button>
-  </div>
-</div>
-
-<!-- Edit Recipe Modal -->
-<div id="edit-recipe-modal" class="modal hidden">
-  <div class="edit-recipe-card">
-    <button id="close-edit-modal" class="close-btn">&times;</button>
-    <h2>Edit Recipe</h2>
-    <label for="edit-title"></label>
-    <input type="text" id="edit-title" placeholder="Recipe Name">
-
-    <label for="edit-category"></label>
-    <input type="text" id="edit-category" placeholder="Category">
-
-    <!-- Ingredients Section -->
-    <div>
-      <h3>Ingredients</h3>
-      <ul id="edit-ingredients-list"></ul>
-
-      <label for="edit-ingredient-subheading"></label>
-      <input type="text" id="edit-ingredient-subheading" placeholder="Subheading:">
-      <label for="edit-ingredient-input"></label>
-      <input type="text" id="edit-ingredient-input" placeholder="Add ingredient">
-      <button id="add-edit-ingredient">
-        <span class="material-symbols-outlined">add</span>
-      </button>
-    </div>
-
-    <!-- Instructions Section -->
-    <div>
-      <h3>Instructions</h3>
-      <ul id="edit-instructions-list"></ul>
-
-      <label for="edit-instruction-subheading"></label>
-      <input type="text" id="edit-instruction-subheading" placeholder="Subheading: ">
-      <label for="edit-instruction-input"></label>
-      <input type="text" id="edit-instruction-input" placeholder="Add instruction">
-      <button id="add-edit-instruction">
-        <span class="material-symbols-outlined">add</span>
-      </button>
-    </div>
-
-    <button id="save-edit">Save</button>
-    <button id="cancel-edit">Cancel</button>
+    <button id="save-recipe">Save</button>
+    <button id="cancel-recipe">Cancel</button>
   </div>
 </div>
 

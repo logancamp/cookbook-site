@@ -39,6 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function saveDeletedRecipes() {
+        console.log("💾 Saving deleted recipes:", deletedRecipes);
         localStorage.setItem("deletedRecipes", JSON.stringify(deletedRecipes));
     }
 
@@ -86,22 +87,16 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("✅ Updated Recipe List:", recipeData.recipes);
     }
 
-    function removeOldRecipes() {
-        const now = Date.now();
-        deletedRecipes = deletedRecipes.filter(recipe => now - recipe.deletedAt < 30 * 24 * 60 * 60 * 1000);
-        saveDeletedRecipes();
-    }
-
     function renderDeletedRecipes() {
         deletedListEl.innerHTML = deletedRecipes
             .map(recipe => `<li class="deleted-item">${recipe.title}</li>`)
             .join("");
 
-        console.log("Recently deleted recipes:", deletedRecipes.map(r => r.title));
+        console.log("🗑️ Recently Deleted Recipes:", deletedRecipes.map(r => r.title));
 
-        // Add hover event to show the view modal
+        // Add event listeners for viewing deleted recipes
         document.querySelectorAll(".deleted-item").forEach((item, i) => {
-            item.addEventListener("mouseenter", () => openViewRecipeModal(i, true)); // Use new function
+            item.addEventListener("mouseenter", () => openViewRecipeModal(i, true));
             item.addEventListener("mouseleave", () => {
                 document.getElementById("view-recipe-modal").classList.add("hidden");
             });
@@ -114,17 +109,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function addItemWithSubheading(inputEl, subheadingEl, listEl) {
         const value = inputEl.value.trim();
-        const subheading = subheadingEl.value.trim();
+        const subheadingInput = subheadingEl.value.trim(); // Capture input
 
-        if (!value) return; // Don't add empty values
+        if (!value) return;
 
-        // Find or create a section for the subheading
-        let section = [...listEl.children].find(div =>
-            div.dataset.subheading === subheading && subheading !== ""
-        );
+        let subheading = subheadingInput; // Use user input as subheading
 
-        if (!section && subheading) {
-            console.log(`Adding new subheading: ${subheading}`);
+        // If no input, use the last existing subheading
+        const sections = [...listEl.querySelectorAll(".subheading-container")];
+        if (!subheading && sections.length > 0) {
+            subheading = sections[sections.length - 1].dataset.subheading;
+            console.log(`🔗 Using existing subheading: ${subheading}`);
+        } else if (!subheading) {
+            subheading = "General"; // Default if no previous subheading exists
+            console.log(`🆕 Creating default subheading: ${subheading}`);
+        }
+
+        // Find or create the section
+        let section = sections.find(div => div.dataset.subheading === subheading);
+
+        if (!section) {
+            console.log(`🆕 Creating new subheading: ${subheading}`);
 
             section = document.createElement("div");
             section.dataset.subheading = subheading;
@@ -138,18 +143,24 @@ document.addEventListener("DOMContentLoaded", () => {
             listEl.appendChild(section);
         }
 
-        // Use the section's list or the main list if no subheading
-        const targetList = section ? section.querySelector("ul") : listEl;
+        const targetList = section.querySelector("ul");
 
+        // Create and append new item
         const itemEl = document.createElement("li");
         itemEl.textContent = value;
+
+        // Enable removal on click
         itemEl.addEventListener("click", () => {
             itemEl.remove();
             updateRecipeData();
         });
 
         targetList.appendChild(itemEl);
-        inputEl.value = ""; // Clear input after adding
+
+        // Clear inputs after adding
+        inputEl.value = "";
+        subheadingEl.value = "";
+
         updateRecipeData(); // Save changes
     }
 
@@ -169,10 +180,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     addRecipeIngredientBtn.addEventListener("click", () =>
-        addItemWithSubheading(document.getElementById("recipe-ingredient-input"), document.getElementById("recipe-ingredient-subheading"), recipeIngredientsList)
+        addItemWithSubheading(
+            document.getElementById("recipe-ingredient-input"),
+            document.getElementById("recipe-ingredient-subheading"),
+            recipeIngredientsList
+        )
     );
+
     addRecipeInstructionBtn.addEventListener("click", () =>
-        addItemWithSubheading(document.getElementById("recipe-instruction-input"), document.getElementById("recipe-instruction-subheading"), recipeInstructionsList)
+        addItemWithSubheading(
+            document.getElementById("recipe-instruction-input"),
+            document.getElementById("recipe-instruction-subheading"),
+            recipeInstructionsList
+        )
     );
 
     function updateCategoryFilter() {
@@ -185,31 +205,15 @@ document.addEventListener("DOMContentLoaded", () => {
     function extractSubheadingData(listEl) {
         let sections = [];
 
-        [...listEl.children].forEach(section => {
-            console.log("🔍 Section HTML:", section.innerHTML);
+        [...listEl.querySelectorAll(".subheading-container")].forEach(section => {
+            let subheading = section.dataset.subheading || "General";
+            let items = [...section.querySelectorAll("li")].map(li => li.textContent.trim());
 
-            let subheading = "Untitled"; // Default subheading
-            let subheadingEl = section.querySelector(".subheading strong") || section.querySelector("strong");
-
-            if (subheadingEl) {
-                subheading = subheadingEl.textContent.trim();
+            if (items.length) {
+                sections.push({ subheading, items });
             }
-
-            // ✅ Fix: Only extract items from **this** subheading's list
-            let items = [];
-            let listEl = section.querySelector("ul");
-            if (listEl) {
-                items = [...listEl.querySelectorAll("li")].map(li => li.textContent.trim());
-            }
-
-            if (!items.length) {
-                console.warn(`⚠️ Keeping empty section: ${subheading}`);
-            }
-
-            sections.push({ subheading, items });
         });
 
-        console.log("✅ Extracted Sections (Corrected):", sections);
         return sections;
     }
 
@@ -218,20 +222,18 @@ document.addEventListener("DOMContentLoaded", () => {
         editIndex = index;
 
         if (index === null) {
-            console.log("🆕 Opening modal for NEW recipe");
             modalTitle.textContent = "Add Recipe";
             recipeTitleEl.value = "";
             recipeCategoryEl.value = "";
             recipeIngredientsList.innerHTML = "";
             recipeInstructionsList.innerHTML = "";
         } else {
-            console.log(`🛠 Opening modal for EDIT at index: ${index}`);
             modalTitle.textContent = "Edit Recipe";
 
             const recipe = recipeData.recipes[index];
 
             if (!recipe) {
-                console.error("❌ Error: No recipe found at index", index);
+                console.error("❌ No recipe found at index", index);
                 return;
             }
 
@@ -247,8 +249,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Helper function to render the edit list with subheadings
     function renderEditList(sections) {
         return sections.map(({ subheading, items }) => `
-        <div class="subheading-container">
-            <p class="subheading"><strong>${subheading || "Untitled"}</strong></p>
+        <div class="subheading-container" data-subheading="${subheading}">
+            <p class="subheading"><strong>${subheading || "General"}</strong></p>
             <ul>${items.map(item => `<li>${item}</li>`).join("")}</ul>
         </div>
     `).join("");
@@ -267,12 +269,10 @@ document.addEventListener("DOMContentLoaded", () => {
         };
 
         if (editIndex !== null && recipeData.recipes[editIndex]) {
-            console.log(`🗑️ Deleting old recipe at index: ${editIndex}`);
-            recipeData.recipes.splice(editIndex, 1); // ✅ Remove the old recipe
+            recipeData.recipes[editIndex] = newRecipe;
+        } else {
+            recipeData.recipes.push(newRecipe);
         }
-
-        console.log("➕ Adding edited recipe as a new entry");
-        recipeData.recipes.push(newRecipe); // ✅ Add the edited recipe as a new one
 
         saveRecipes();
         renderRecipes();
@@ -323,19 +323,26 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function deleteRecipe(index) {
-        console.log(`Deleting index: ${index}, Recipe title: ${recipeData.recipes[index]?.title}`);
+        if (index === undefined || index < 0 || index >= recipeData.recipes.length) {
+            console.error("❌ Invalid index for deletion:", index);
+            return;
+        }
 
-        let deletedRecipe = { ...recipeData.recipes[index], deletedAt: Date.now() };
-        deletedRecipes.push(deletedRecipe);
+        console.log(`🗑️ Moving recipe to Recently Deleted: ${recipeData.recipes[index]?.title}`);
+
+        // ✅ Move the deleted item to Recently Deleted
+        deletedRecipes.push(recipeData.recipes[index]);
+
+        // ✅ Remove only the selected recipe from the main list
         recipeData.recipes.splice(index, 1);
 
+        // ✅ Save both lists after modification
         saveDeletedRecipes();
         saveRecipes();
 
-        console.log("Updated recipes after deletion:", recipeData.recipes.map(r => r.title));
-
-        renderRecipes(); // Force full re-render
-        renderDeletedRecipes(); // Ensure deleted recipes update
+        // ✅ Re-render both lists
+        renderRecipes();
+        renderDeletedRecipes();
     }
 
     // Event Delegation for Edit & Delete
@@ -346,9 +353,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const index = [...recipeListEl.children].indexOf(card);
 
         if (e.target.closest(".edit-btn")) {
-            openRecipeModal(index); // ✅ NOW USES THE UNIFIED MODAL
+            openRecipeModal(index);
         } else if (e.target.closest(".delete-btn")) {
-            deleteRecipe(index);
+            deleteRecipe(index); // ✅ Make sure the correct index is passed
         } else {
             openViewRecipeModal(index);
         }
@@ -398,26 +405,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     clearTrashBtn.addEventListener("click", () => {
         if (!isConfirming && deletedRecipes.length !== 0) {
-            // First click: Start confirmation mode
             isConfirming = true;
             clearTrashBtn.classList.add("active");
             clearTrashIcon.classList.remove("hidden");
 
-            // Set a timeout to reset confirmation if second click doesn’t happen
+            // Reset confirmation after timeout
             confirmTimeout = setTimeout(() => {
                 isConfirming = false;
                 clearTrashBtn.classList.remove("active");
                 clearTrashIcon.classList.add("hidden");
-            }, 2500); // Reset after 2.5s (matches CSS transition)
-
+            }, 2500);
         } else {
-            // Second click: Confirm and delete all
-            clearTimeout(confirmTimeout); // Prevent timeout from resetting it
+            // ✅ Permanently delete all recently deleted recipes
             deletedRecipes = [];
             saveDeletedRecipes();
             renderDeletedRecipes();
 
-            // Reset everything
             isConfirming = false;
             clearTrashBtn.classList.remove("active");
             clearTrashIcon.classList.add("hidden");
@@ -459,8 +462,6 @@ document.addEventListener("DOMContentLoaded", () => {
             confirmModal.classList.add("hidden");
         }
     });
-
-    removeOldRecipes();
     renderDeletedRecipes();
 
     // Initial Render

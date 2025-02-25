@@ -352,8 +352,8 @@ ul {
     border: none;
     cursor: pointer;
     width: 90%;
-    text-align: center; /* Start centered */
-    overflow: hidden;
+    text-align: center;
+    overflow: hidden; /* ✅ Prevents extra red sliver */
     transition: color 0.4s ease-in-out;
 }
 
@@ -367,11 +367,11 @@ ul {
     content: attr(data-text);
     position: absolute;
     top: 50%;
-    left: 50%; /* Start centered */
-    transform: translate(-50%, -50%); /* Center the text */
+    left: 50%; /* ✅ Start centered */
+    transform: translate(-50%, -50%); /* ✅ Ensure text stays centered */
     z-index: 2;
     color: inherit;
-    transition: left 0.4s ease-in-out, transform 0.4s ease-in-out; /* Smooth movement */
+    transition: left 0.4s ease-in-out, transform 0.4s ease-in-out;
 }
 
 /* Sliding red background */
@@ -379,7 +379,7 @@ ul {
     content: "";
     position: absolute;
     top: 0;
-    left: 100%; /* Start fully hidden */
+    left: 105%; /* ✅ Fully hidden by default */
     width: 100%;
     height: 100%;
     background-color: #ef2b3d;
@@ -389,17 +389,22 @@ ul {
 
 /* Active state */
 .deleted-header #clear-trash.active::after {
-    left: 0; /* Slide red background in */
+    left: 0; /* ✅ Fully covers when active */
 }
 
 .deleted-header #clear-trash.active::before {
-    left: 10%; /* Move text left */
-    transform: translate(0, -50%); /* Stop centering */
+    left: 10%; /* ✅ Moves text left */
+    transform: translate(0, -50%); /* ✅ Keeps text aligned */
 }
 
 .deleted-header #clear-trash.active {
     color: white;
-    text-align: left; /* Align button text to the left */
+    text-align: left;
+}
+
+/* ✅ Reset Button Completely When Deactivated */
+.deleted-header #clear-trash:not(.active)::after {
+    left: 105%; /* ✅ Fully hides background when deactivated */
 }
 
 #deleted-recipes-list {

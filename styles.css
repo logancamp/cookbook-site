@@ -219,11 +219,42 @@ button .material-symbols-outlined {
     hyphens: auto; /* Add hyphens where applicable */
 }
 
-.edit-recipe,
-.new-recipe,
-.edit-recipe-card ul li,
-.new-recipe-card ul li{
+/* Ensure subheadings remain fully left-aligned */
+.subheading {
+    font-weight: bold;
+    font-size: 1.2em;
+    text-align: left;
+    margin-left: -15px;
+    padding-top: 20px;
+    display: block;
+}
+
+/* Remove any extra padding/margin from outer containers */
+#new-ingredients-list, #new-instructions-list,
+#edit-ingredients-list, #edit-instructions-list {
+    margin-left: 20px;
+    padding: 0 10px 0 0;
+    list-style-type: none; /* Remove unintended bullets */
+}
+
+.edit-recipe, .new-recipe,
+.edit-recipe-card ul li, .new-recipe-card ul li{
     margin-left: -50px;
+}
+
+/* Reduce gap below "Ingredients" & "Instructions" only if there's a subheading */
+h3 {
+    margin-bottom: 5px; /* Default small spacing */
+}
+
+/* If a subheading is directly followed by a list, reduce spacing */
+.subheading + .subheading-list {
+    margin-top: -15px; /* Reduce extra space only if list exists */
+}
+
+/* If there’s no list, prevent overlapping */
+.subheading-container:not(:has(.subheading-list li)) {
+    margin-bottom: 0; /* Ensure no extra space if empty */
 }
 
 .edit-recipe,

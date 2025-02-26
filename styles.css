@@ -78,7 +78,7 @@ body {
 
 .recipe-card #ingredients-title {
     text-align: left;
-    margin-bottom: 10px;
+    margin-bottom: -15px;
 }
 
 .recipe-card .ingredients-list,
@@ -252,6 +252,33 @@ h3 {
     margin-top: -15px; /* Reduce extra space only if list exists */
 }
 
+.subheading + ul {
+    margin-top: -5px; /* Pull list closer to subheading */
+}
+
+.subheading-container {
+    margin: 10px 0; /* Reduce spacing around subheading blocks */
+    padding: 0; /* Remove unnecessary padding */
+}
+
+#recipe-modal .subheading {
+    margin-top: -25px; /* Pull list closer to subheading */
+    margin-left: -25px; /* Pull list closer to subheading */
+}
+
+#view-recipe-modal {
+    margin-left: -5px; /* Pull list closer to subheading */
+}
+
+#view-recipe-modal .subheading {
+    margin-top: -15px; /* Pull list closer to subheading */
+    margin-left: 5px; /* Pull list closer to subheading */
+}
+
+#view-recipe-modal ul {
+    margin-top: 3px; /* Reduce extra space only if list exists */
+}
+
 /* If there’s no list, prevent overlapping */
 .subheading-container:not(:has(.subheading-list li)) {
     margin-bottom: 0; /* Ensure no extra space if empty */
@@ -266,7 +293,7 @@ h3 {
 .recipe-card ul,
 .view-recipe-card ul {
     padding-left: 15px;
-    margin-top: 5px;
+    margin-top: -20px;
 }
 
 /* Modal Inputs */
@@ -282,8 +309,9 @@ h3 {
 .subheading {
     font-weight: bold;
     font-size: 1.2em;
-    margin-bottom: 5px;
     text-align: left;
+    margin: 5px 0; /* Reduce top and bottom spacing */
+    display: block;
 }
 
 ul {

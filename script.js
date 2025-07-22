@@ -1,4 +1,146 @@
+// Global array to store subrecipes during modal editing
+
+let activeSubrecipes = [];
+let subrecipeEditorTemplate;
+
+
+// Open the editor for an existing sub-recipe
+function openSubrecipeEditor(idx) {
+    console.log("🛠️ openSubrecipeEditor called with idx:", idx, "activeSubrecipes:", activeSubrecipes);
+    const modal = document.getElementById("recipe-modal");
+    console.log("🛠️ modal element:", modal);
+    const clone = subrecipeEditorTemplate.cloneNode(true);
+    console.log("🛠️ clone created:", clone);
+    clone.id = "subrecipe-edit-" + idx;
+    clone.classList.add("subrecipe-modal-card");
+    // Update header
+    const title = activeSubrecipes[idx].title;
+    clone.querySelector("#recipe-modal-title").textContent = `Edit: ${title}`;
+    // Prefill inputs
+    clone.querySelector("#recipe-title").value = title;
+    clone.querySelector("#recipe-category").value = activeSubrecipes[idx].category;
+
+    // Define lists before wiring and using
+    const ingList = clone.querySelector("#recipe-ingredients-list");
+    const instList = clone.querySelector("#recipe-instructions-list");
+
+    // Populate lists
+    ingList.innerHTML = "";
+    activeSubrecipes[idx].ingredients.forEach(i => {
+        const li = document.createElement("li");
+        li.textContent = i;
+        li.addEventListener("click", () => li.remove());
+        ingList.appendChild(li);
+    });
+    instList.innerHTML = "";
+    activeSubrecipes[idx].instructions.forEach(i => {
+        const li = document.createElement("li");
+        li.textContent = i;
+        li.addEventListener("click", () => li.remove());
+        instList.appendChild(li);
+    });
+    // Wire add-item buttons (clone and replace to avoid stale event bindings)
+    const ingBtn = clone.querySelector("#add-recipe-ingredient");
+    const instBtn = clone.querySelector("#add-recipe-instruction");
+    const ingInput = clone.querySelector("#recipe-ingredient-input");
+    const instInput = clone.querySelector("#recipe-instruction-input");
+
+    if (ingBtn && ingInput) {
+        const newIngBtn = ingBtn.cloneNode(true);
+        ingBtn.replaceWith(newIngBtn);
+        newIngBtn.addEventListener("click", () => addSimpleItem(ingInput, ingList));
+    }
+
+    if (instBtn && instInput) {
+        const newInstBtn = instBtn.cloneNode(true);
+        instBtn.replaceWith(newInstBtn);
+        newInstBtn.addEventListener("click", () => addSimpleItem(instInput, instList));
+    }
+    // Override Save (replace button and wire fresh listener)
+    let oldSave = clone.querySelector("#save-recipe");
+    let newSave = oldSave.cloneNode(true);
+    oldSave.replaceWith(newSave);
+    newSave.addEventListener("click", () => {
+        console.log("🛠️ saving subrecipe idx:", idx);
+        activeSubrecipes[idx] = {
+            title: clone.querySelector("#recipe-title").value.trim(),
+            category: clone.querySelector("#recipe-category").value.trim(),
+            ingredients: extractListItems(ingList),
+            instructions: extractListItems(instList)
+        };
+        renderSubrecipesPreview();
+        clone.remove();
+    });
+    // Override Cancel/Close (replace buttons and wire fresh listeners)
+    ["#cancel-recipe", "#close-recipe-modal"].forEach(sel => {
+        const oldBtn = clone.querySelector(sel);
+        const newBtn = oldBtn.cloneNode(true);
+        oldBtn.replaceWith(newBtn);
+        newBtn.addEventListener("click", () => {
+            console.log("🛠️ cancel/close clicked for subrecipe idx:", idx);
+            clone.remove();
+        });
+    });
+    // Append after all listeners are wired
+    modal.appendChild(clone);
+}
+
+/**
+ * Renders the current list of subrecipes under the main recipe instruction list.
+ */
+function renderSubrecipesPreview() {
+    console.log("🛠️ renderSubrecipesPreview(), activeSubrecipes:", activeSubrecipes);
+    const list = document.getElementById("recipe-instructions-list");
+    if (!list) return;
+    // Remove existing subrecipe items
+    list.querySelectorAll("li.subrecipe-li").forEach(li => li.remove());
+    // Re-populate with updated subrecipes
+    activeSubrecipes.forEach((sub, idx) => {
+        console.log("🛠️ rendering subrecipe at idx:", idx, "title:", sub.title);
+        const li = document.createElement("li");
+        li.classList.add("subrecipe-li");
+        li.textContent = `Sub-Recipe: ${sub.title}`;
+        li.dataset.idx = idx;
+        // Inline edit on double-click
+        li.addEventListener("dblclick", () => {
+            li.contentEditable = "true";
+            li.focus();
+        });
+        // Save title on blur
+        li.addEventListener("blur", () => {
+            const text = li.textContent.trim();
+            const newTitle = text.replace(/^Sub-Recipe:\s*/, "");
+            activeSubrecipes[idx].title = newTitle;
+            li.textContent = `Sub-Recipe: ${newTitle}`;
+        });
+        // Open full editor on click
+        li.addEventListener("click", () => openSubrecipeEditor(idx));
+        list.appendChild(li);
+    });
+}
+
+// Add a simple item to a list (no subheading, just <li>), remove on click
+function addSimpleItem(inputEl, listEl) {
+    const value = inputEl.value.trim();
+    if (!value) return;
+    const itemEl = document.createElement("li");
+    itemEl.textContent = value;
+    itemEl.addEventListener("click", () => {
+        itemEl.remove();
+    });
+    listEl.appendChild(itemEl);
+    inputEl.value = "";
+}
+
+// Extracts an array of textContent values from each <li> in the list
+function extractListItems(listEl) {
+    return [...listEl.querySelectorAll("li")].map(li => li.textContent.trim());
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+    console.log("🟢 DOMContentLoaded: script initialized");
+    const modal = document.getElementById("recipe-modal");
+    subrecipeEditorTemplate = modal.querySelector(".edit-recipe-card");
     const recipeListEl = document.getElementById("recipe-list");
     const searchInput = document.getElementById("search");
     const categoryFilter = document.getElementById("category-filter");
@@ -107,62 +249,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function addItemWithSubheading(inputEl, subheadingEl, listEl) {
-        const value = inputEl.value.trim();
-        const subheadingInput = subheadingEl.value.trim(); // Capture input
-
-        if (!value) return;
-
-        let subheading = subheadingInput; // Use user input as subheading
-
-        // If no input, use the last existing subheading
-        const sections = [...listEl.querySelectorAll(".subheading-container")];
-        if (!subheading && sections.length > 0) {
-            subheading = sections[sections.length - 1].dataset.subheading;
-            console.log(`🔗 Using existing subheading: ${subheading}`);
-        } else if (!subheading) {
-            subheading = "General"; // Default if no previous subheading exists
-            console.log(`🆕 Creating default subheading: ${subheading}`);
-        }
-
-        // Find or create the section
-        let section = sections.find(div => div.dataset.subheading === subheading);
-
-        if (!section) {
-            console.log(`🆕 Creating new subheading: ${subheading}`);
-
-            section = document.createElement("div");
-            section.dataset.subheading = subheading;
-            section.classList.add("subheading-container");
-
-            section.innerHTML = `
-            <p class="subheading"><strong>${subheading}</strong></p>
-            <ul></ul>
-        `;
-
-            listEl.appendChild(section);
-        }
-
-        const targetList = section.querySelector("ul");
-
-        // Create and append new item
-        const itemEl = document.createElement("li");
-        itemEl.textContent = value;
-
-        // Enable removal on click
-        itemEl.addEventListener("click", () => {
-            itemEl.remove();
-            updateRecipeData();
-        });
-
-        targetList.appendChild(itemEl);
-
-        // Clear inputs after adding
-        inputEl.value = "";
-        subheadingEl.value = "";
-
-        updateRecipeData(); // Save changes
-    }
 
     // Helper function to update the recipe data
     function updateRecipeData() {
@@ -180,17 +266,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     addRecipeIngredientBtn.addEventListener("click", () =>
-        addItemWithSubheading(
+        addSimpleItem(
             document.getElementById("recipe-ingredient-input"),
-            document.getElementById("recipe-ingredient-subheading"),
             recipeIngredientsList
         )
     );
 
     addRecipeInstructionBtn.addEventListener("click", () =>
-        addItemWithSubheading(
+        addSimpleItem(
             document.getElementById("recipe-instruction-input"),
-            document.getElementById("recipe-instruction-subheading"),
             recipeInstructionsList
         )
     );
@@ -202,24 +286,12 @@ document.addEventListener("DOMContentLoaded", () => {
             .join("");
     }
 
-    function extractSubheadingData(listEl) {
-        let sections = [];
-
-        [...listEl.querySelectorAll(".subheading-container")].forEach(section => {
-            let subheading = section.dataset.subheading || "General";
-            let items = [...section.querySelectorAll("li")].map(li => li.textContent.trim());
-
-            if (items.length) {
-                sections.push({ subheading, items });
-            }
-        });
-
-        return sections;
-    }
 
     // Open Modal (Handles both New and Edit)
     function openRecipeModal(index = null) {
         editIndex = index;
+        // Reset subrecipes for new or edit
+        activeSubrecipes = [];
 
         if (index === null) {
             modalTitle.textContent = "Add Recipe";
@@ -241,9 +313,35 @@ document.addEventListener("DOMContentLoaded", () => {
             recipeCategoryEl.value = recipe.category;
             recipeIngredientsList.innerHTML = renderEditList(recipe.sections || []);
             recipeInstructionsList.innerHTML = renderEditList(recipe.instructions || []);
+            // If editing, load subrecipes if present
+            if (recipe.subrecipes && Array.isArray(recipe.subrecipes)) {
+                activeSubrecipes = recipe.subrecipes.slice();
+            }
         }
 
         recipeModal.classList.remove("hidden");
+        // Render existing subrecipes as special instruction items
+        activeSubrecipes.forEach((sub, idx) => {
+            const li = document.createElement("li");
+            li.classList.add("subrecipe-li");
+            li.textContent = `Sub-Recipe: ${sub.title}`;
+            li.dataset.idx = idx;
+            // Inline edit on double-click
+            li.addEventListener("dblclick", () => {
+                li.contentEditable = "true";
+                li.focus();
+            });
+            // Save title on blur
+            li.addEventListener("blur", () => {
+                const text = li.textContent.trim();
+                const newTitle = text.replace(/^Sub-Recipe:\s*/, "");
+                activeSubrecipes[idx].title = newTitle;
+                li.textContent = `Sub-Recipe: ${newTitle}`;
+            });
+            // Open full editor on click
+            li.addEventListener("click", () => openSubrecipeEditor(idx));
+            recipeInstructionsList.appendChild(li);
+        });
     }
 
     // Helper function to render the edit list with subheadings
@@ -264,8 +362,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const newRecipe = {
             title: recipeTitleEl.value.trim(),
             category: recipeCategoryEl.value.trim(),
-            sections: extractSubheadingData(recipeIngredientsList) || [],
-            instructions: extractSubheadingData(recipeInstructionsList) || []
+            ingredients: extractListItems(recipeIngredientsList) || [],
+            instructions: extractListItems(recipeInstructionsList) || [],
+            subrecipes: activeSubrecipes.slice()
         };
 
         if (editIndex !== null && recipeData.recipes[editIndex]) {
@@ -379,6 +478,77 @@ document.addEventListener("DOMContentLoaded", () => {
     saveRecipeBtn.addEventListener("click", saveRecipe);
     cancelRecipeBtn.addEventListener("click", closeRecipeModal);
     document.getElementById("close-recipe-modal").addEventListener("click", closeRecipeModal);
+
+    // Subrecipe modal logic (clone inner card to flex container)
+    const subBtn = document.getElementById("add-sub-recipe-btn");
+    console.log("🔍 add-sub-recipe-btn element:", subBtn);
+    if (subBtn) {
+        subBtn.addEventListener("click", () => {
+            const modal = document.getElementById("recipe-modal");
+            if (!modal) return;
+            console.log("🔥 add-sub-recipe-btn clicked");
+            const cloneCard = subrecipeEditorTemplate.cloneNode(true);
+            if (!cloneCard) return;
+            cloneCard.id = "subrecipe-card-" + Date.now();
+            cloneCard.classList.add("subrecipe-modal-card");
+            // Update header
+            const header = cloneCard.querySelector("#recipe-modal-title");
+            if (header) header.textContent = "Add Sub-Recipe";
+            // Clear inputs and lists in clone
+            [
+              "#recipe-title",
+              "#recipe-category",
+              "#recipe-ingredient-input",
+              "#recipe-instruction-input"
+            ].forEach(sel => {
+              const el = cloneCard.querySelector(sel);
+              if (el) el.value = "";
+            });
+            const ingList = cloneCard.querySelector("#recipe-ingredients-list");
+            const instList = cloneCard.querySelector("#recipe-instructions-list");
+            if (ingList) ingList.innerHTML = "";
+            if (instList) instList.innerHTML = "";
+            // Wire up add-item buttons inside cloned card
+            const ingBtn = cloneCard.querySelector("#add-recipe-ingredient");
+            const instBtn = cloneCard.querySelector("#add-recipe-instruction");
+            const ingInput = cloneCard.querySelector("#recipe-ingredient-input");
+            const instInput = cloneCard.querySelector("#recipe-instruction-input");
+            if (ingBtn && ingInput && ingList) {
+              ingBtn.addEventListener("click", () => addSimpleItem(ingInput, ingList));
+            }
+            if (instBtn && instInput && instList) {
+              instBtn.addEventListener("click", () => addSimpleItem(instInput, instList));
+            }
+            // Override save/cancel for this sub-card
+            const saveBtn = cloneCard.querySelector("#save-recipe");
+            const cancelBtn = cloneCard.querySelector("#cancel-recipe");
+            if (saveBtn) {
+              const newSave = saveBtn.cloneNode(true);
+              saveBtn.parentNode.replaceChild(newSave, saveBtn);
+              // REFACTORED: Use shared preview renderer and no manual li/event wiring here
+              newSave.addEventListener("click", () => {
+                  const title = cloneCard.querySelector("#recipe-title")?.value.trim() || "";
+                  const category = cloneCard.querySelector("#recipe-category")?.value.trim() || "";
+                  const ingredients = extractListItems(cloneCard.querySelector("#recipe-ingredients-list")) || [];
+                  const instructions = extractListItems(cloneCard.querySelector("#recipe-instructions-list")) || [];
+                  if (title) {
+                      activeSubrecipes.push({ title, category, ingredients, instructions });
+                      renderSubrecipesPreview();
+                  }
+                  cloneCard.remove();
+              });
+            }
+            if (cancelBtn) {
+              const newCancel = cancelBtn.cloneNode(true);
+              cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+              newCancel.addEventListener("click", () => {
+                cloneCard.remove();
+              });
+            }
+            // Append cloned card to modal flex container
+            modal.appendChild(cloneCard);
+        });
+    }
 
     openTrashBtn.addEventListener("click", (event) => {
         event.stopPropagation(); // Prevent this click from triggering the outside click event

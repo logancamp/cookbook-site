@@ -193,10 +193,12 @@ button .material-symbols-outlined {
 
 /* Modal Content */
 .edit-recipe-card {
-    background: white;
+    position: relative; /* Needed so "X" is placed relative to the modal */
     padding: 20px;
     border-radius: 10px;
-    width: 300px;
+    background: white;
+    width: 350px;
+    max-width: 90%;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
     text-align: left;
 }
@@ -556,4 +558,28 @@ ul {
     visibility: hidden;
     opacity: 0;
     transition: opacity 0.5s ease-in-out;
+}
+
+/* Modal flex container: center recipe cards and subrecipe cards */
+#recipe-modal:not(.hidden) {
+  display: flex;
+  justify-content: center; /* center horizontally */
+  align-items: center;     /* center vertically */
+  gap: 20px;               /* space between cards */
+  position: fixed;         /* ensure it covers the viewport */
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Prevent cards from shrinking and maintain vertical centering */
+.edit-recipe-card,
+.subrecipe-modal-card {
+  flex-shrink: 0;
+}
+
+/* Optional styling for subrecipe card margin */
+.subrecipe-modal-card {
+  margin-left: 20px;
 }

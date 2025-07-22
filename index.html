@@ -96,8 +96,6 @@
       <h3>Ingredients</h3>
       <ul id="recipe-ingredients-list"></ul>
 
-      <label for="recipe-ingredient-subheading"></label>
-      <input type="text" id="recipe-ingredient-subheading" placeholder="Subheading:">
       <label for="recipe-ingredient-input"></label>
       <input type="text" id="recipe-ingredient-input" placeholder="Add ingredient">
       <button id="add-recipe-ingredient">
@@ -110,13 +108,15 @@
       <h3>Instructions</h3>
       <ul id="recipe-instructions-list"></ul>
 
-      <label for="recipe-instruction-subheading"></label>
-      <input type="text" id="recipe-instruction-subheading" placeholder="Subheading:">
       <label for="recipe-instruction-input"></label>
       <input type="text" id="recipe-instruction-input" placeholder="Add instruction">
       <button id="add-recipe-instruction">
         <span class="material-symbols-outlined">add</span>
       </button>
+      <button id="add-sub-recipe-btn">
+        <span class="material-symbols-outlined">call_split</span> Add Sub-Recipe
+      </button>
+      <div id="subrecipe-preview" class="subrecipe-container"></div>
     </div>
 
     <button id="save-recipe">Save</button>

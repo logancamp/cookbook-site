@@ -64,18 +64,21 @@
 
 <!-- View Recipe Modal -->
 <div id="view-recipe-modal" class="modal hidden">
-  <div class="view-recipe-card">
-    <button id="close-view-recipe">
-      <span class="material-symbols-outlined">close</span>
-    </button>
-    <h2 id="view-title"></h2>
-    <p id="view-category-container"><b>Category:</b> <span id="view-category"></span></p>
+  <div class="modal-wrapper">
+    <div class="view-recipe-card">
+      <button id="close-view-recipe">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+      <h2 id="view-title"></h2>
+      <p id="view-category-container"><b>Category:</b> <span id="view-category"></span></p>
 
-    <h3>Ingredients</h3>
-    <ul id="view-ingredients-list"></ul>
+      <h3>Ingredients</h3>
+      <ul id="view-ingredients-list"></ul>
 
-    <br><h3>Instructions</h3>
-    <ul id="view-instructions-list"></ul>
+      <br><h3>Instructions</h3>
+      <ul id="view-instructions-list"></ul>
+    </div>
+    <div id="view-subrecipes"></div>
   </div>
 </div>
 

@@ -161,36 +161,6 @@ button .material-symbols-outlined {
     justify-content: center;
 }
 
-/* View Recipe Modal */
-.view-recipe-card {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    width: 400px;
-    max-width: 90%;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-    text-align: left;
-    position: relative;
-}
-
-.view-recipe-card h2 {
-    font-size: 1.5em;
-    text-align: center;
-    word-wrap: break-word; /* Break long words */
-    overflow-wrap: break-word; /* Ensure proper wrapping */
-    hyphens: auto; /* Add hyphens where applicable */
-}
-
-#close-view-recipe {
-    background: none;
-    border: none;
-    font-size: 1.5em;
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    cursor: pointer;
-}
-
 /* Modal Content */
 .edit-recipe-card {
     position: relative; /* Needed so "X" is placed relative to the modal */
@@ -209,7 +179,7 @@ button .material-symbols-outlined {
 
 #view-category-container {
     margin-top: 0;
-    margin-bottom: 50px;
+    margin-bottom: 20px;
     text-align: center;
 }
 
@@ -269,7 +239,16 @@ h3 {
 }
 
 #view-recipe-modal {
-    margin-left: -5px; /* Pull list closer to subheading */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: row;
+  gap: 20px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
 }
 
 #view-recipe-modal .subheading {
@@ -582,4 +561,39 @@ ul {
 /* Optional styling for subrecipe card margin */
 .subrecipe-modal-card {
   margin-left: 20px;
+}
+
+.modal-main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  flex: 1;
+  max-width: 600px;
+}
+.modal-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+
+#view-subrecipes {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+}
+
+.view-recipe-card {
+  width: 400px;
+  max-width: 90%;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  text-align: left;
+  background: white;
+  position: relative;
+  flex: 1;
+  min-width: 300px;
 }

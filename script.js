@@ -11,7 +11,8 @@ function openSubrecipeEditor(idx) {
     console.log("🛠️ modal element:", modal);
     const clone = subrecipeEditorTemplate.cloneNode(true);
     console.log("🛠️ clone created:", clone);
-    clone.id = "subrecipe-edit-" + idx;
+    if (modal.querySelector(`#subrecipe-edit-${idx}`)) return; // prevent duplicates
+    clone.id = `subrecipe-edit-${idx}`;
     clone.classList.add("subrecipe-modal-card");
     // Update header
     const title = activeSubrecipes[idx].title;
@@ -26,17 +27,31 @@ function openSubrecipeEditor(idx) {
 
     // Populate lists
     ingList.innerHTML = "";
-    activeSubrecipes[idx].ingredients.forEach(i => {
+    (activeSubrecipes[idx].ingredients || []).forEach(i => {
         const li = document.createElement("li");
         li.textContent = i;
-        li.addEventListener("click", () => li.remove());
+        li.style.listStyleType = "circle";
+        li.addEventListener("click", () => {
+            li.contentEditable = "true";
+            li.focus();
+        });
+        li.addEventListener("blur", () => {
+            li.contentEditable = "false";
+        });
         ingList.appendChild(li);
     });
     instList.innerHTML = "";
-    activeSubrecipes[idx].instructions.forEach(i => {
+    (activeSubrecipes[idx].instructions || []).forEach(i => {
         const li = document.createElement("li");
         li.textContent = i;
-        li.addEventListener("click", () => li.remove());
+        li.style.listStyleType = "circle";
+        li.addEventListener("click", () => {
+            li.contentEditable = "true";
+            li.focus();
+        });
+        li.addEventListener("blur", () => {
+            li.contentEditable = "false";
+        });
         instList.appendChild(li);
     });
     // Wire add-item buttons (clone and replace to avoid stale event bindings)
@@ -71,16 +86,31 @@ function openSubrecipeEditor(idx) {
         renderSubrecipesPreview();
         clone.remove();
     });
-    // Override Cancel/Close (replace buttons and wire fresh listeners)
-    ["#cancel-recipe", "#close-recipe-modal"].forEach(sel => {
-        const oldBtn = clone.querySelector(sel);
-        const newBtn = oldBtn.cloneNode(true);
-        oldBtn.replaceWith(newBtn);
-        newBtn.addEventListener("click", () => {
-            console.log("🛠️ cancel/close clicked for subrecipe idx:", idx);
+    // Override Delete button (replace cancel) for subrecipe editing
+    {
+        const oldCancelBtn = clone.querySelector("#cancel-recipe");
+        const deleteBtn = oldCancelBtn.cloneNode(true);
+        deleteBtn.id = "delete-subrecipe-btn";
+        deleteBtn.className = "delete-btn";
+        deleteBtn.textContent = "Delete";
+        oldCancelBtn.replaceWith(deleteBtn);
+        deleteBtn.addEventListener("click", () => {
+            console.log("🛠️ delete subrecipe idx:", idx);
+            activeSubrecipes.splice(idx, 1);
+            renderSubrecipesPreview();
             clone.remove();
         });
-    });
+    }
+    // Override Close (X button) to only close the editor modal
+    {
+        const oldCloseBtn = clone.querySelector("#close-recipe-modal");
+        const newCloseBtn = oldCloseBtn.cloneNode(true);
+        oldCloseBtn.replaceWith(newCloseBtn);
+        newCloseBtn.addEventListener("click", () => {
+            console.log("🛠️ close editor for subrecipe idx:", idx);
+            clone.remove();
+        });
+    }
     // Append after all listeners are wired
     modal.appendChild(clone);
 }
@@ -89,34 +119,19 @@ function openSubrecipeEditor(idx) {
  * Renders the current list of subrecipes under the main recipe instruction list.
  */
 function renderSubrecipesPreview() {
-    console.log("🛠️ renderSubrecipesPreview(), activeSubrecipes:", activeSubrecipes);
-    const list = document.getElementById("recipe-instructions-list");
-    if (!list) return;
-    // Remove existing subrecipe items
-    list.querySelectorAll("li.subrecipe-li").forEach(li => li.remove());
-    // Re-populate with updated subrecipes
-    activeSubrecipes.forEach((sub, idx) => {
-        console.log("🛠️ rendering subrecipe at idx:", idx, "title:", sub.title);
-        const li = document.createElement("li");
-        li.classList.add("subrecipe-li");
-        li.textContent = `Sub-Recipe: ${sub.title}`;
-        li.dataset.idx = idx;
-        // Inline edit on double-click
-        li.addEventListener("dblclick", () => {
-            li.contentEditable = "true";
-            li.focus();
-        });
-        // Save title on blur
-        li.addEventListener("blur", () => {
-            const text = li.textContent.trim();
-            const newTitle = text.replace(/^Sub-Recipe:\s*/, "");
-            activeSubrecipes[idx].title = newTitle;
-            li.textContent = `Sub-Recipe: ${newTitle}`;
-        });
-        // Open full editor on click
-        li.addEventListener("click", () => openSubrecipeEditor(idx));
-        list.appendChild(li);
-    });
+  console.log("🛠️ renderSubrecipesPreview(), activeSubrecipes:", activeSubrecipes);
+  const list = document.getElementById("recipe-instructions-list");
+  if (!list) return;
+  // Remove any old sub-recipe lines
+  list.querySelectorAll("li.subrecipe-li").forEach(li => li.remove());
+  // Inject exactly one <li> per sub-recipe, styled just like a normal instruction
+  activeSubrecipes.forEach((sub, idx) => {
+    const li = document.createElement("li");
+    li.classList.add("subrecipe-li");
+    li.dataset.idx = idx;
+    li.innerHTML = `Make: <span class="clickable-title">${sub.title}</span>`;
+    list.appendChild(li);
+  });
 }
 
 // Add a simple item to a list (no subheading, just <li>), remove on click
@@ -125,10 +140,21 @@ function addSimpleItem(inputEl, listEl) {
     if (!value) return;
     const itemEl = document.createElement("li");
     itemEl.textContent = value;
+    itemEl.style.listStyleType = "circle";
     itemEl.addEventListener("click", () => {
-        itemEl.remove();
+        itemEl.contentEditable = "true";
+        itemEl.focus();
     });
-    listEl.appendChild(itemEl);
+    itemEl.addEventListener("blur", () => {
+        itemEl.contentEditable = "false";
+    });
+    // Append to the UL inside the container, if it exists, otherwise to the container itself
+    const parentList = listEl.tagName === "UL" ? listEl : listEl.querySelector("ul");
+    if (parentList) {
+        parentList.appendChild(itemEl);
+    } else {
+        listEl.appendChild(itemEl);
+    }
     inputEl.value = "";
 }
 
@@ -187,14 +213,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function renderRecipeSection(sections) {
         if (!Array.isArray(sections)) {
+            // Try fallback to flat ingredients array
+            if (Array.isArray(sections?.ingredients)) {
+                return `
+                    <ul>${sections.ingredients.map(item => `<li>${item}</li>`).join("")}</ul>
+                `;
+            }
             console.error("❌ renderRecipeSection() expected an array but got:", sections);
             return "";
         }
 
         return sections.map(({ subheading, items }) => `
-        <p class="subheading"><strong>${subheading || ""}</strong></p><br>
-        <ul>${items.map(item => `<li>${item}</li>`).join("")}</ul>
-    `).join("");
+            ${subheading ? `<p class="subheading"><strong>${subheading}</strong></p>` : ""}
+            <ul>${items.map(item => `<li>${item}</li>`).join("")}</ul>
+        `).join("");
     }
 
     function renderRecipes() {
@@ -204,6 +236,7 @@ document.addEventListener("DOMContentLoaded", () => {
         recipeData.recipes.forEach((recipe, index) => {
             const recipeCard = document.createElement("div");
             recipeCard.classList.add("recipe-card");
+            recipeCard.dataset.index = index;
 
             recipeCard.innerHTML = `
             <div class="render-title">
@@ -211,7 +244,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 <p>${recipe.category}</p>
             </div>
             <p id="ingredients-title"><b>Ingredients:</b></p>
-            <div class="ingredients-container">${renderRecipeSection(recipe.sections)}</div>
+            <div class="ingredients-container">
+              ${renderRecipeSection(recipe.sections || [
+                { subheading: "", items: recipe.ingredients || [] }
+              ])}
+              ${(recipe.subrecipes || []).map(sub => `
+                <div class="subrecipe-ingredients">
+                  <p class="subheading"><strong>Ingredients: ${sub.title}</strong></p>
+                  <ul>
+                    ${(sub.ingredients || []).map(i => `<li>${i}</li>`).join("")}
+                  </ul>
+                </div>
+              `).join("")}
+            </div>
             <button class="edit-btn">
                 <span class="material-symbols-outlined">edit</span> Edit
             </button>
@@ -220,8 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
             </button>
         `;
 
-            recipeCard.querySelector(".edit-btn").addEventListener("click", () => openRecipeModal(index));
-            recipeCard.querySelector(".delete-btn").addEventListener("click", () => deleteRecipe(index));
+            // Removed direct delete-btn click listener (handled by event delegation)
 
             recipeListEl.appendChild(recipeCard);
         });
@@ -309,49 +353,84 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
+            // Patch: Ensure recipe.sections is always an array for editing, and its first element has an items array
+            if (
+                !Array.isArray(recipe.sections) ||
+                !Array.isArray(recipe.sections[0]?.items)
+            ) {
+                recipe.sections = [
+                    { subheading: "", items: Array.isArray(recipe.ingredients) ? recipe.ingredients : [] }
+                ];
+            }
+
+            // Patch: Ensure recipe.instructions is always an array for editing, and its first element has an items array
+            if (
+                !Array.isArray(recipe.instructions) ||
+                !Array.isArray(recipe.instructions[0]?.items)
+            ) {
+                recipe.instructions = [
+                    { subheading: "", items: Array.isArray(recipe.instructions) ? recipe.instructions : [] }
+                ];
+            }
+
             recipeTitleEl.value = recipe.title;
             recipeCategoryEl.value = recipe.category;
-            recipeIngredientsList.innerHTML = renderEditList(recipe.sections || []);
-            recipeInstructionsList.innerHTML = renderEditList(recipe.instructions || []);
+            // Populate ingredients list manually for consistent styling
+            recipeIngredientsList.innerHTML = "";
+            (recipe.sections?.[0]?.items || []).forEach(i => {
+                const li = document.createElement("li");
+                li.textContent = i;
+                li.style.listStyleType = "circle";
+                li.addEventListener("click", () => {
+                    li.contentEditable = "true";
+                    li.focus();
+                });
+                li.addEventListener("blur", () => {
+                    li.contentEditable = "false";
+                });
+                recipeIngredientsList.appendChild(li);
+            });
+
+            // Populate instructions list manually for consistent styling, skipping sub-recipe placeholders
+            recipeInstructionsList.innerHTML = "";
+            (recipe.instructions?.[0]?.items || []).forEach(i => {
+                // Skip sub-recipe placeholders when rendering normal instructions
+                if (/^Make:\s*/.test(i)) return;
+                const li = document.createElement("li");
+                li.textContent = i;
+                li.style.listStyleType = "circle";
+                li.addEventListener("click", () => {
+                    li.contentEditable = "true";
+                    li.focus();
+                });
+                li.addEventListener("blur", () => {
+                    li.contentEditable = "false";
+                });
+                recipeInstructionsList.appendChild(li);
+            });
             // If editing, load subrecipes if present
             if (recipe.subrecipes && Array.isArray(recipe.subrecipes)) {
                 activeSubrecipes = recipe.subrecipes.slice();
             }
+            // Render subrecipes preview after setting activeSubrecipes
+            renderSubrecipesPreview();
         }
 
+        // Removed: manual sub-recipe toggle click handlers (now handled by event delegation)
+
         recipeModal.classList.remove("hidden");
-        // Render existing subrecipes as special instruction items
-        activeSubrecipes.forEach((sub, idx) => {
-            const li = document.createElement("li");
-            li.classList.add("subrecipe-li");
-            li.textContent = `Sub-Recipe: ${sub.title}`;
-            li.dataset.idx = idx;
-            // Inline edit on double-click
-            li.addEventListener("dblclick", () => {
-                li.contentEditable = "true";
-                li.focus();
-            });
-            // Save title on blur
-            li.addEventListener("blur", () => {
-                const text = li.textContent.trim();
-                const newTitle = text.replace(/^Sub-Recipe:\s*/, "");
-                activeSubrecipes[idx].title = newTitle;
-                li.textContent = `Sub-Recipe: ${newTitle}`;
-            });
-            // Open full editor on click
-            li.addEventListener("click", () => openSubrecipeEditor(idx));
-            recipeInstructionsList.appendChild(li);
-        });
     }
 
     // Helper function to render the edit list with subheadings
     function renderEditList(sections) {
-        return sections.map(({ subheading, items }) => `
-        <div class="subheading-container" data-subheading="${subheading}">
-            <p class="subheading"><strong>${subheading || "General"}</strong></p>
-            <ul>${items.map(item => `<li>${item}</li>`).join("")}</ul>
-        </div>
-    `).join("");
+        return sections
+            .filter(({ items }) => Array.isArray(items) && items.length > 0)
+            .map(({ subheading, items }) => `
+            <div class="subheading-container" data-subheading="${subheading}">
+                ${subheading ? `<p class="subheading"><strong>${subheading}</strong></p><br>` : ""}
+                <ul>${items.map(item => `<li>${item}</li>`).join("")}</ul>
+            </div>
+        `).join("");
     }
 
     function closeRecipeModal() {
@@ -362,9 +441,19 @@ document.addEventListener("DOMContentLoaded", () => {
         const newRecipe = {
             title: recipeTitleEl.value.trim(),
             category: recipeCategoryEl.value.trim(),
-            ingredients: extractListItems(recipeIngredientsList) || [],
-            instructions: extractListItems(recipeInstructionsList) || [],
-            subrecipes: activeSubrecipes.slice()
+            sections: [
+                { subheading: "", items: extractListItems(recipeIngredientsList) || [] }
+            ],
+            instructions: [
+                { subheading: "", items: extractListItems(recipeInstructionsList) || [] }
+            ],
+            // Store subrecipes with current edits
+            subrecipes: activeSubrecipes.map(sub => ({
+                title: sub.title,
+                category: sub.category,
+                ingredients: sub.ingredients || [],
+                instructions: sub.instructions || []
+            }))
         };
 
         if (editIndex !== null && recipeData.recipes[editIndex]) {
@@ -389,7 +478,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function openViewRecipeModal(index, isDeleted = false) {
-        const list = isDeleted ? deletedRecipes : recipeData.recipes; // Use deletedRecipes if viewing trash
+        const list = isDeleted ? deletedRecipes : recipeData.recipes;
         console.log(`Opening modal for ${isDeleted ? "deleted" : "active"} recipe at index: ${index}`);
 
         if (!list[index]) {
@@ -398,14 +487,99 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const recipe = list[index];
+        // Fallback logic to support both structured and unstructured recipe formats
+        const sections = recipe.sections || [
+          { subheading: "", items: recipe.ingredients || [] }
+        ];
+        // Patch: Ensure instructions always has [{ subheading, items }] shape
+        const instructions = Array.isArray(recipe.instructions?.[0]?.items)
+            ? recipe.instructions
+            : [{ subheading: "", items: recipe.instructions || [] }];
 
-        // ✅ Fix: Ensure sections exist before rendering to avoid `undefined.map` errors
-        document.getElementById("view-title").textContent = recipe.title;
-        document.getElementById("view-category").textContent = recipe.category;
-        document.getElementById("view-ingredients-list").innerHTML = renderViewList(recipe.sections || []);
-        document.getElementById("view-instructions-list").innerHTML = renderViewList(recipe.instructions || []);
+        let modal = document.getElementById("view-recipe-modal");
+        // Clear modal
+        modal.innerHTML = "";
 
-        document.getElementById("view-recipe-modal").classList.remove("hidden");
+        // Create modal-wrapper container
+        let wrapper = document.createElement("div");
+        wrapper.className = "modal-wrapper";
+
+        // Create modal-main
+        let modalMain = document.createElement("div");
+        modalMain.className = "modal-main";
+        modalMain.innerHTML = `
+          <div class="view-recipe-card">
+            <h2 id="view-title"></h2>
+            <p id="view-category"></p>
+            <h3>Ingredients</h3>
+            <div id="view-ingredients-list"></div>
+            <h3>Instructions</h3>
+            <div id="view-instructions-list"></div>
+            <button id="close-view-recipe" class="close-btn">&times;</button>
+          </div>
+        `;
+        wrapper.appendChild(modalMain);
+        wrapper.appendChild(document.createElement("div")).id = "view-subrecipes";
+        modal.appendChild(wrapper);
+
+        // Set modal content
+        modalMain.querySelector("#view-title").textContent = recipe.title;
+        modalMain.querySelector("#view-category").textContent = recipe.category;
+        modalMain.querySelector("#view-ingredients-list").innerHTML = renderViewList(sections);
+        modalMain.querySelector("#view-instructions-list").innerHTML = renderViewList(instructions);
+
+        // --- Subrecipe view logic ---
+        // Find all <li> in instructions and add .subrecipe-li class if needed, and wrap title in span
+        Array.from(modalMain.querySelector("#view-instructions-list").querySelectorAll("li")).forEach((li, idx) => {
+            if (/^Make:/.test(li.textContent)) {
+                const text = li.textContent.trim();
+                const title = text.replace(/^Make:\s*/, "");
+                li.classList.add("subrecipe-li");
+                li.innerHTML = `Make: <span class="clickable-title">${title}</span>`;
+            }
+        });
+        // Now select all .subrecipe-li
+        modalMain.querySelectorAll("#view-instructions-list .subrecipe-li").forEach((li, idx) => {
+            li.style.cursor = "pointer";
+            li.addEventListener("click", () => {
+                let subList = wrapper.querySelector("#view-subrecipes");
+                if (!subList) {
+                    subList = document.createElement("div");
+                    subList.id = "view-subrecipes";
+                    wrapper.appendChild(subList);
+                }
+
+                const existing = subList.querySelector(`#subrecipe-card-${idx}`);
+                if (existing) {
+                    existing.remove();
+                    return;
+                }
+
+                const sub = recipe.subrecipes?.[idx];
+                if (!sub) return;
+
+                const subCard = document.createElement("div");
+                subCard.classList.add("view-recipe-card");
+                subCard.id = `subrecipe-card-${idx}`;
+                subCard.innerHTML = `
+                  <h2>${sub.title}</h2>
+                  <p>${sub.category || ""}</p>
+                  <h3>Ingredients</h3>
+                  <div>${renderViewList([{ subheading: "", items: sub.ingredients || [] }])}</div>
+                  <h3>Instructions</h3>
+                  <div>${renderViewList([{ subheading: "", items: sub.instructions || [] }])}</div>
+                  <button class="close-btn" onclick="this.parentElement.remove()">×</button>
+                `;
+                subList.appendChild(subCard);
+            });
+        });
+
+        // Wire up close button in modal-main
+        modalMain.querySelector("#close-view-recipe").addEventListener("click", () => {
+            modal.classList.add("hidden");
+        });
+
+        modal.classList.remove("hidden");
     }
 
     // Helper function to render view list with subheadings
@@ -449,7 +623,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const card = e.target.closest(".recipe-card");
         if (!card) return;
 
-        const index = [...recipeListEl.children].indexOf(card);
+        const index = Number(card.dataset.index);
 
         if (e.target.closest(".edit-btn")) {
             openRecipeModal(index);
@@ -460,9 +634,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    document.getElementById("close-view-recipe").addEventListener("click", () => {
-        document.getElementById("view-recipe-modal").classList.add("hidden");
-    });
+    // The close button is now dynamically created inside modal-main in openViewRecipeModal.
 
     document.getElementById("view-recipe-modal").addEventListener("click", (e) => {
         if (e.target === document.getElementById("view-recipe-modal")) {
@@ -521,7 +693,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             // Override save/cancel for this sub-card
             const saveBtn = cloneCard.querySelector("#save-recipe");
-            const cancelBtn = cloneCard.querySelector("#cancel-recipe");
+            const deleteBtn = cloneCard.querySelector("#cancel-recipe");
             if (saveBtn) {
               const newSave = saveBtn.cloneNode(true);
               saveBtn.parentNode.replaceChild(newSave, saveBtn);
@@ -538,12 +710,46 @@ document.addEventListener("DOMContentLoaded", () => {
                   cloneCard.remove();
               });
             }
+            // --- PATCH: Replace deleteBtn logic to ensure correct labeling and full removal from activeSubrecipes ---
+            const cancelBtn = cloneCard.querySelector("#cancel-recipe");
             if (cancelBtn) {
-              const newCancel = cancelBtn.cloneNode(true);
-              cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
-              newCancel.addEventListener("click", () => {
-                cloneCard.remove();
-              });
+                const deleteBtn = cancelBtn.cloneNode(true);
+                deleteBtn.id = "delete-subrecipe-btn";
+                deleteBtn.className = "delete-btn";
+                deleteBtn.textContent = "Delete";
+                cancelBtn.replaceWith(deleteBtn);
+                deleteBtn.addEventListener("click", () => {
+                    const title = cloneCard.querySelector("#recipe-title")?.value.trim();
+                    const category = cloneCard.querySelector("#recipe-category")?.value.trim();
+                    const ingredients = extractListItems(cloneCard.querySelector("#recipe-ingredients-list"));
+                    const instructions = extractListItems(cloneCard.querySelector("#recipe-instructions-list"));
+                    const idx = activeSubrecipes.findIndex(sub =>
+                        sub.title === title &&
+                        sub.category === category &&
+                        JSON.stringify(sub.ingredients) === JSON.stringify(ingredients) &&
+                        JSON.stringify(sub.instructions) === JSON.stringify(instructions)
+                    );
+                    if (idx !== -1) {
+                        activeSubrecipes.splice(idx, 1);
+                        renderSubrecipesPreview();
+                    }
+                    cloneCard.remove();
+                });
+            }
+            // Toggle logic: remove existing card with same id, or add
+            const existing = modal.querySelector(`#${cloneCard.id}`);
+            if (existing) {
+                // Extract and save subrecipe data if title is present before removing
+                const title = existing.querySelector("#recipe-title")?.value.trim() || "";
+                const category = existing.querySelector("#recipe-category")?.value.trim() || "";
+                const ingredients = extractListItems(existing.querySelector("#recipe-ingredients-list")) || [];
+                const instructions = extractListItems(existing.querySelector("#recipe-instructions-list")) || [];
+                if (title) {
+                    activeSubrecipes.push({ title, category, ingredients, instructions });
+                    renderSubrecipesPreview();
+                }
+                existing.remove();
+                return;
             }
             // Append cloned card to modal flex container
             modal.appendChild(cloneCard);
@@ -637,4 +843,152 @@ document.addEventListener("DOMContentLoaded", () => {
     // Initial Render
     updateCategoryFilter();
     renderRecipes();
+
+    // Centralized toggle logic for sub-recipe items in edit mode (capture phase)
+    const instructionsList = document.getElementById("recipe-instructions-list");
+    if (instructionsList) {
+      instructionsList.addEventListener('click', (event) => {
+        const li = event.target.closest('li.subrecipe-li');
+        if (!li) return;
+        const idx = Number(li.dataset.idx);
+        if (isNaN(idx)) return;
+        const modal = document.getElementById("recipe-modal");
+        const existing = modal.querySelector(`#subrecipe-edit-${idx}`);
+        if (existing) {
+          // Save edits before closing
+          const clone = existing;
+          const title = clone.querySelector("#recipe-title")?.value.trim() || "";
+          const category = clone.querySelector("#recipe-category")?.value.trim() || "";
+          const ingredients = extractListItems(clone.querySelector("#recipe-ingredients-list")) || [];
+          const instructions = extractListItems(clone.querySelector("#recipe-instructions-list")) || [];
+          if (title) {
+            activeSubrecipes[idx] = { title, category, ingredients, instructions };
+            renderSubrecipesPreview();
+          }
+          existing.remove();
+        } else {
+          openSubrecipeEditor(idx);
+        }
+      }, true);
+    }
 });
+
+// --- Add CSS for subrecipe card and modal side-by-side layout ---
+// This block injects styles only once
+if (!document.getElementById("subrecipe-card-style")) {
+    const style = document.createElement("style");
+    style.id = "subrecipe-card-style";
+    style.textContent = `
+#view-recipe-modal .modal-content {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 32px;
+}
+#view-subrecipes {
+    flex: 1;
+    padding: 24px 0;
+    display: flex;
+    justify-content: center;
+}
+.subrecipe-card {
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    padding: 20px 24px;
+    margin: 40px auto 0 auto;
+    font-size: 1rem;
+    max-width: 600px;
+    width: 100%;
+    opacity: 0;
+    transform: translateX(0);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.subrecipe-card.show {
+    opacity: 1;
+    transform: translateX(40px);
+}
+.subrecipe-card h4 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 1.2em;
+}
+.subrecipe-card ul {
+    padding-left: 20px;
+    margin-bottom: 16px;
+}
+.subrecipe-card p {
+    margin-bottom: 6px;
+}
+.subrecipe-back-arrow {
+    color: #888;
+    margin-right: 6px;
+    cursor: pointer;
+    font-weight: 700;
+    transition: color 0.15s;
+}
+.subrecipe-back-arrow:hover {
+    color: #333;
+}
+/* Consistent indent for edit modal lists */
+.edit-recipe-card #recipe-ingredients-list,
+.edit-recipe-card #recipe-instructions-list {
+    padding-left: 30px;
+    margin-left: 0;
+    list-style-position: outside;
+}
+.edit-recipe-card ul {
+    margin: 0 0 16px 40px !important;
+}
+/* Ensure sub-recipe ingredients don't overlap */
+.recipe-card .ingredients-container {
+    overflow: visible;
+}
+.recipe-card .subrecipe-ingredients {
+    margin-top: 4px;
+    clear: both;
+}
+.recipe-card .subrecipe-ingredients .subheading {
+    margin-bottom: 4px;
+}
+/* Reduce gap below main Ingredients title */
+.recipe-card #ingredients-title {
+    margin-bottom: 4px;
+}
+/* Thumbnail view ingredient lists consistency */
+.recipe-card .ingredients-container ul,
+.recipe-card .subrecipe-ingredients ul {
+    list-style-type: disc;
+    margin: 4px 0 0 20px;
+    padding-left: 0;
+}
+/* Add space under main Ingredients heading */
+.recipe-card #ingredients-title {
+    margin-bottom: 8px !important;
+}
+/* Add space under Sub-Recipe heading */
+.recipe-card .subrecipe-ingredients .subheading {
+    margin-bottom: 8px !important;
+}
+/* Space above thumbnail card buttons */
+.recipe-card .edit-btn,
+.recipe-card .delete-btn {
+    margin-top: 16px;
+}
+/* Clickable style for subrecipe titles (edit and view) */
+.clickable-title {
+    background-color: #f0f0f0;
+    color: #333;
+    padding: 2px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 500;
+}
+.clickable-title:hover {
+    background-color: #e0e0e0;
+}
+`;
+    document.head.appendChild(style);
+}

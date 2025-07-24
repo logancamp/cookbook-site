@@ -1,6 +1,26 @@
 // Global array to store subrecipes during modal editing
 
 let activeSubrecipes = [];
+/**
+ * Add or update a sub-recipe in activeSubrecipes.
+ * If idx is a number, replaces at that index; otherwise pushes a new entry.
+ */
+function setSubrecipe(idx, subrecipe) {
+  if (typeof idx === 'number') {
+    activeSubrecipes[idx] = subrecipe;
+  } else {
+    activeSubrecipes.push(subrecipe);
+  }
+  renderSubrecipesPreview();
+}
+
+/**
+ * Remove a sub-recipe by index and re-render.
+ */
+function removeSubrecipe(idx) {
+  activeSubrecipes.splice(idx, 1);
+  renderSubrecipesPreview();
+}
 let subrecipeEditorTemplate;
 
 
@@ -77,13 +97,12 @@ function openSubrecipeEditor(idx) {
     oldSave.replaceWith(newSave);
     newSave.addEventListener("click", () => {
         console.log("🛠️ saving subrecipe idx:", idx);
-        activeSubrecipes[idx] = {
+        setSubrecipe(idx, {
             title: clone.querySelector("#recipe-title").value.trim(),
             category: clone.querySelector("#recipe-category").value.trim(),
             ingredients: extractListItems(ingList),
             instructions: extractListItems(instList)
-        };
-        renderSubrecipesPreview();
+        });
         clone.remove();
     });
     // Override Delete button (replace cancel) for subrecipe editing
@@ -96,8 +115,7 @@ function openSubrecipeEditor(idx) {
         oldCancelBtn.replaceWith(deleteBtn);
         deleteBtn.addEventListener("click", () => {
             console.log("🛠️ delete subrecipe idx:", idx);
-            activeSubrecipes.splice(idx, 1);
-            renderSubrecipesPreview();
+            removeSubrecipe(idx);
             clone.remove();
         });
     }
@@ -725,8 +743,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   const ingredients = extractListItems(cloneCard.querySelector("#recipe-ingredients-list")) || [];
                   const instructions = extractListItems(cloneCard.querySelector("#recipe-instructions-list")) || [];
                   if (title) {
-                      activeSubrecipes.push({ title, category, ingredients, instructions });
-                      renderSubrecipesPreview();
+                      setSubrecipe(undefined, { title, category, ingredients, instructions });
                   }
                   cloneCard.remove();
               });
@@ -751,8 +768,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         JSON.stringify(sub.instructions) === JSON.stringify(instructions)
                     );
                     if (idx !== -1) {
-                        activeSubrecipes.splice(idx, 1);
-                        renderSubrecipesPreview();
+                        removeSubrecipe(idx);
                     }
                     cloneCard.remove();
                 });
@@ -766,8 +782,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const ingredients = extractListItems(existing.querySelector("#recipe-ingredients-list")) || [];
                 const instructions = extractListItems(existing.querySelector("#recipe-instructions-list")) || [];
                 if (title) {
-                    activeSubrecipes.push({ title, category, ingredients, instructions });
-                    renderSubrecipesPreview();
+                    setSubrecipe(undefined, { title, category, ingredients, instructions });
                 }
                 existing.remove();
                 return;

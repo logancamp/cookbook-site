@@ -1,6 +1,9 @@
 // Global array to store subrecipes during modal editing
-
 let activeSubrecipes = [];
+// Generate unique IDs for recipes and subrecipes
+function generateRecipeId() {
+    return 'r_' + Math.random().toString(36).slice(2, 12) + '_' + Date.now();
+}
 /**
  * Add or update a sub-recipe in activeSubrecipes.
  * If idx is a number, replaces at that index; otherwise pushes a new entry.
@@ -111,7 +114,7 @@ function openSubrecipeEditor(idx) {
         const deleteBtn = oldCancelBtn.cloneNode(true);
         deleteBtn.id = "delete-subrecipe-btn";
         deleteBtn.className = "delete-btn";
-        deleteBtn.textContent = "Delete";
+        deleteBtn.textContent = "Remove";
         oldCancelBtn.replaceWith(deleteBtn);
         deleteBtn.addEventListener("click", () => {
             console.log("🛠️ delete subrecipe idx:", idx);
@@ -248,29 +251,44 @@ document.addEventListener("DOMContentLoaded", () => {
         `).join("");
     }
 
+    // Render all recipes, including subrecipes as first-class items
     function renderRecipes() {
         console.log("🔄 Rendering recipes...");
+        // Collect all recipes, including subrecipes as first-class
+        const allRecipes = [];
+        const recipeMap = {};
+        recipeData.recipes.forEach(r => {
+            allRecipes.push(r);
+            recipeMap[r.id] = r;
+        });
+        // Add subrecipes as top-level recipes if not already present
+        recipeData.recipes.forEach(r => {
+            if (r.subrecipeIds && Array.isArray(r.subrecipeIds)) {
+                r.subrecipeIds.forEach(subId => {
+                    const sub = recipeMap[subId];
+                    if (sub && !allRecipes.includes(sub)) {
+                        allRecipes.push(sub);
+                    }
+                });
+            }
+        });
         // Apply search and category filters
         const query = searchInput.value.trim().toLowerCase();
         const selectedCategory = categoryFilter.value;
-        const recipesToRender = recipeData.recipes.filter(recipe => {
-          // Category filter (skip if not 'all' and doesn't match)
-          if (selectedCategory && selectedCategory !== "all" && recipe.category !== selectedCategory) {
-            return false;
-          }
-          // Search filter (match title or category)
-          if (query && !recipe.title.toLowerCase().includes(query) && !recipe.category.toLowerCase().includes(query)) {
-            return false;
-          }
-          return true;
+        const recipesToRender = allRecipes.filter(recipe => {
+            if (selectedCategory && selectedCategory !== "all" && recipe.category !== selectedCategory) {
+                return false;
+            }
+            if (query && !recipe.title.toLowerCase().includes(query) && !recipe.category.toLowerCase().includes(query)) {
+                return false;
+            }
+            return true;
         });
-        recipeListEl.innerHTML = ""; // ✅ Clear before re-rendering
-
+        recipeListEl.innerHTML = "";
         recipesToRender.forEach((recipe, index) => {
             const recipeCard = document.createElement("div");
             recipeCard.classList.add("recipe-card");
             recipeCard.dataset.index = index;
-
             recipeCard.innerHTML = `
             <div class="render-title">
                 <h3>${recipe.title}</h3>
@@ -281,14 +299,6 @@ document.addEventListener("DOMContentLoaded", () => {
               ${renderRecipeSection(recipe.sections || [
                 { subheading: "", items: recipe.ingredients || [] }
               ])}
-              ${(recipe.subrecipes || []).map(sub => `
-                <div class="subrecipe-ingredients">
-                  <p class="subheading"><strong>Ingredients: ${sub.title}</strong></p>
-                  <ul>
-                    ${(sub.ingredients || []).map(i => `<li>${i}</li>`).join("")}
-                  </ul>
-                </div>
-              `).join("")}
             </div>
             <button class="edit-btn">
                 <span class="material-symbols-outlined">edit</span> Edit
@@ -296,14 +306,10 @@ document.addEventListener("DOMContentLoaded", () => {
             <button class="delete-btn">
                 <span class="material-symbols-outlined">delete</span> Delete
             </button>
-        `;
-
-            // Removed direct delete-btn click listener (handled by event delegation)
-
+            `;
             recipeListEl.appendChild(recipeCard);
         });
-
-        console.log("✅ Updated Recipe List:", recipeData.recipes);
+        console.log("✅ Updated Recipe List:", allRecipes);
     }
 
     function renderDeletedRecipes() {
@@ -441,11 +447,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
                 recipeInstructionsList.appendChild(li);
             });
-            // If editing, load subrecipes if present
-            if (recipe.subrecipes && Array.isArray(recipe.subrecipes)) {
-                activeSubrecipes = recipe.subrecipes.slice();
+            // If editing, load linked sub-recipes by ID
+            if (Array.isArray(recipe.subrecipeIds)) {
+                activeSubrecipes = recipe.subrecipeIds
+                    .map(id => recipeData.recipes.find(r => r.id === id))
+                    .filter(r => r);
+            } else {
+                activeSubrecipes = [];
             }
-            // Render subrecipes preview after setting activeSubrecipes
+            // Render sub-recipes preview under instructions list
             renderSubrecipesPreview();
         }
 
@@ -470,31 +480,48 @@ document.addEventListener("DOMContentLoaded", () => {
         recipeModal.classList.add("hidden");
     }
 
+    // Save a recipe and its subrecipes as first-class recipes with linking
     function saveRecipe() {
-        const newRecipe = {
-            title: recipeTitleEl.value.trim(),
-            category: recipeCategoryEl.value.trim(),
-            sections: [
-                { subheading: "", items: extractListItems(recipeIngredientsList) || [] }
-            ],
-            instructions: [
-                { subheading: "", items: extractListItems(recipeInstructionsList) || [] }
-            ],
-            // Store subrecipes with current edits
-            subrecipes: activeSubrecipes.map(sub => ({
-                title: sub.title,
-                category: sub.category,
-                ingredients: sub.ingredients || [],
-                instructions: sub.instructions || []
-            }))
-        };
-
+        // Assign IDs to subrecipes if missing, and collect their IDs
+        const subrecipesWithIds = activeSubrecipes.map(sub => {
+            if (!sub.id) sub.id = generateRecipeId();
+            return sub;
+        });
+        const subrecipeIds = subrecipesWithIds.map(sub => sub.id);
+        // Assign ID to main recipe if editing, else new
+        let mainRecipe;
         if (editIndex !== null && recipeData.recipes[editIndex]) {
-            recipeData.recipes[editIndex] = newRecipe;
+            mainRecipe = recipeData.recipes[editIndex];
         } else {
-            recipeData.recipes.push(newRecipe);
+            mainRecipe = { id: generateRecipeId() };
         }
-
+        // Update main recipe fields
+        mainRecipe.title = recipeTitleEl.value.trim();
+        mainRecipe.category = recipeCategoryEl.value.trim();
+        mainRecipe.sections = [
+            { subheading: "", items: extractListItems(recipeIngredientsList) || [] }
+        ];
+        mainRecipe.instructions = [
+            { subheading: "", items: extractListItems(recipeInstructionsList) || [] }
+        ];
+        mainRecipe.subrecipeIds = subrecipeIds;
+        // Remove subrecipes array from main recipe (now linked by id)
+        delete mainRecipe.subrecipes;
+        // Insert or update main recipe
+        if (editIndex !== null && recipeData.recipes[editIndex]) {
+            recipeData.recipes[editIndex] = mainRecipe;
+        } else {
+            recipeData.recipes.push(mainRecipe);
+        }
+        // Add or update subrecipes as first-class recipes
+        subrecipesWithIds.forEach(sub => {
+            const idx = recipeData.recipes.findIndex(r => r.id === sub.id);
+            if (idx !== -1) {
+                recipeData.recipes[idx] = sub;
+            } else {
+                recipeData.recipes.push(sub);
+            }
+        });
         saveRecipes();
         renderRecipes();
         closeRecipeModal();
@@ -566,51 +593,42 @@ document.addEventListener("DOMContentLoaded", () => {
         cards.forEach(card => makeDraggable(card));
 
         // --- Subrecipe view logic ---
-        // Find all <li> in instructions and add .subrecipe-li class if needed, and wrap title in span
-        Array.from(modalMain.querySelector("#view-instructions-list").querySelectorAll("li")).forEach((li, idx) => {
-            if (/^Make:/.test(li.textContent)) {
-                const text = li.textContent.trim();
+        const viewList = modalMain.querySelector("#view-instructions-list");
+        Array.from(viewList.querySelectorAll("li")).forEach((li, idx) => {
+            const text = li.textContent.trim();
+            if (text.startsWith("Make:")) {
                 const title = text.replace(/^Make:\s*/, "");
-                li.classList.add("subrecipe-li");
                 li.innerHTML = `Make: <span class="clickable-title">${title}</span>`;
+                li.style.cursor = "pointer";
+                li.addEventListener("click", () => {
+                    const subId = recipe.subrecipeIds?.[idx];
+                    if (!subId) return;
+                    const sub = recipeData.recipes.find(r => r.id === subId);
+                    if (!sub) return;
+                    const subList = document.getElementById("view-subrecipes");
+                    // Toggle: remove if already shown
+                    const existing = subList.querySelector(`#subrecipe-card-${sub.id}`);
+                    if (existing) {
+                        existing.remove();
+                        return;
+                    }
+                    // Create and append sub-recipe card
+                    const subCard = document.createElement("div");
+                    subCard.className = "view-recipe-card";
+                    subCard.id = `subrecipe-card-${sub.id}`;
+                    subCard.innerHTML = `
+                        <h2>${sub.title}</h2>
+                        <p>${sub.category || ""}</p>
+                        <h3>Ingredients</h3>
+                        <div>${renderViewList(sub.sections || [{ subheading: "", items: sub.ingredients || [] }])}</div>
+                        <h3>Instructions</h3>
+                        <div>${renderViewList(sub.instructions || [{ subheading: "", items: sub.instructions || [] }])}</div>
+                        <button class="close-btn" onclick="this.parentElement.remove()">×</button>
+                    `;
+                    subList.appendChild(subCard);
+                    makeDraggable(subCard);
+                });
             }
-        });
-        // Now select all .subrecipe-li
-        modalMain.querySelectorAll("#view-instructions-list .subrecipe-li").forEach((li, idx) => {
-            li.style.cursor = "pointer";
-            li.addEventListener("click", () => {
-                let subList = wrapper.querySelector("#view-subrecipes");
-                if (!subList) {
-                    subList = document.createElement("div");
-                    subList.id = "view-subrecipes";
-                    wrapper.appendChild(subList);
-                }
-
-                const existing = subList.querySelector(`#subrecipe-card-${idx}`);
-                if (existing) {
-                    existing.remove();
-                    return;
-                }
-
-                const sub = recipe.subrecipes?.[idx];
-                if (!sub) return;
-
-                const subCard = document.createElement("div");
-                subCard.classList.add("view-recipe-card");
-                subCard.id = `subrecipe-card-${idx}`;
-                subCard.innerHTML = `
-                  <h2>${sub.title}</h2>
-                  <p>${sub.category || ""}</p>
-                  <h3>Ingredients</h3>
-                  <div>${renderViewList([{ subheading: "", items: sub.ingredients || [] }])}</div>
-                  <h3>Instructions</h3>
-                  <div>${renderViewList([{ subheading: "", items: sub.instructions || [] }])}</div>
-                  <button class="close-btn" onclick="this.parentElement.remove()">×</button>
-                `;
-                subList.appendChild(subCard);
-                // Make this newly-opened sub-recipe card draggable
-                makeDraggable(subCard);
-            });
         });
 
         // Wire up close button in modal-main
@@ -754,7 +772,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const deleteBtn = cancelBtn.cloneNode(true);
                 deleteBtn.id = "delete-subrecipe-btn";
                 deleteBtn.className = "delete-btn";
-                deleteBtn.textContent = "Delete";
+                deleteBtn.textContent = "Remove";
                 cancelBtn.replaceWith(deleteBtn);
                 deleteBtn.addEventListener("click", () => {
                     const title = cloneCard.querySelector("#recipe-title")?.value.trim();
@@ -904,6 +922,13 @@ document.addEventListener("DOMContentLoaded", () => {
           }
           existing.remove();
         } else {
+          // Inline edit: open a sub-recipe editor card for this linked recipe
+          const sub = activeSubrecipes[idx];
+          if (sub && sub.id) {
+            openSubrecipeEditor(idx);
+            return;
+          }
+          // Fallback: inline edit of a new sub-recipe draft
           openSubrecipeEditor(idx);
         }
       }, true);

@@ -113,6 +113,7 @@ function openSubrecipeEditor(idx) {
     }
     // Append after all listeners are wired
     modal.appendChild(clone);
+    makeDraggable(clone);
 }
 
 /**
@@ -231,9 +232,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function renderRecipes() {
         console.log("🔄 Rendering recipes...");
+        // Apply search and category filters
+        const query = searchInput.value.trim().toLowerCase();
+        const selectedCategory = categoryFilter.value;
+        const recipesToRender = recipeData.recipes.filter(recipe => {
+          // Category filter (skip if not 'all' and doesn't match)
+          if (selectedCategory && selectedCategory !== "all" && recipe.category !== selectedCategory) {
+            return false;
+          }
+          // Search filter (match title or category)
+          if (query && !recipe.title.toLowerCase().includes(query) && !recipe.category.toLowerCase().includes(query)) {
+            return false;
+          }
+          return true;
+        });
         recipeListEl.innerHTML = ""; // ✅ Clear before re-rendering
 
-        recipeData.recipes.forEach((recipe, index) => {
+        recipesToRender.forEach((recipe, index) => {
             const recipeCard = document.createElement("div");
             recipeCard.classList.add("recipe-card");
             recipeCard.dataset.index = index;
@@ -528,6 +543,10 @@ document.addEventListener("DOMContentLoaded", () => {
         modalMain.querySelector("#view-ingredients-list").innerHTML = renderViewList(sections);
         modalMain.querySelector("#view-instructions-list").innerHTML = renderViewList(instructions);
 
+        // Enable dragging for all view cards
+        const cards = wrapper.querySelectorAll('.view-recipe-card');
+        cards.forEach(card => makeDraggable(card));
+
         // --- Subrecipe view logic ---
         // Find all <li> in instructions and add .subrecipe-li class if needed, and wrap title in span
         Array.from(modalMain.querySelector("#view-instructions-list").querySelectorAll("li")).forEach((li, idx) => {
@@ -571,6 +590,8 @@ document.addEventListener("DOMContentLoaded", () => {
                   <button class="close-btn" onclick="this.parentElement.remove()">×</button>
                 `;
                 subList.appendChild(subCard);
+                // Make this newly-opened sub-recipe card draggable
+                makeDraggable(subCard);
             });
         });
 
@@ -751,8 +772,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 existing.remove();
                 return;
             }
-            // Append cloned card to modal flex container
-            modal.appendChild(cloneCard);
+    // Append cloned card to modal flex container
+    modal.appendChild(cloneCard);
+    makeDraggable(cloneCard);
         });
     }
 
@@ -875,21 +897,50 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // --- Add CSS for subrecipe card and modal side-by-side layout ---
 // This block injects styles only once
+// Helper to make elements draggable
+function makeDraggable(el) {
+    el.style.position = 'absolute';
+    let isDragging = false;
+    let offsetX = 0, offsetY = 0;
+    el.addEventListener('mousedown', e => {
+        isDragging = true;
+        offsetX = e.clientX - el.offsetLeft;
+        offsetY = e.clientY - el.offsetTop;
+        el.style.cursor = 'move';
+        el.style.zIndex = '1000';
+    });
+    document.addEventListener('mousemove', e => {
+        if (!isDragging) return;
+        el.style.left = (e.clientX - offsetX) + 'px';
+        el.style.top = (e.clientY - offsetY) + 'px';
+    });
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            el.style.cursor = '';
+            el.style.zIndex = '';
+        }
+    });
+}
+
 if (!document.getElementById("subrecipe-card-style")) {
     const style = document.createElement("style");
     style.id = "subrecipe-card-style";
     style.textContent = `
-#view-recipe-modal .modal-content {
+#view-recipe-modal .modal-wrapper {
     display: flex;
     flex-direction: row;
-    align-items: flex-start;
+    align-items: center;
+    justify-content: center;
     gap: 32px;
 }
 #view-subrecipes {
     flex: 1;
     padding: 24px 0;
-    display: flex;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 32px;
+    justify-items: center;
 }
 .subrecipe-card {
     background: #fff;

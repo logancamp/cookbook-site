@@ -34,6 +34,9 @@ function openSubrecipeEditor(idx) {
     console.log("🛠️ modal element:", modal);
     const clone = subrecipeEditorTemplate.cloneNode(true);
     console.log("🛠️ clone created:", clone);
+    // Remove the “X” close button from edit sub-recipe modal
+    const closeBtn = clone.querySelector("#close-recipe-modal");
+    if (closeBtn) closeBtn.remove();
     if (modal.querySelector(`#subrecipe-edit-${idx}`)) return; // prevent duplicates
     clone.id = `subrecipe-edit-${idx}`;
     clone.classList.add("subrecipe-modal-card");
@@ -122,16 +125,7 @@ function openSubrecipeEditor(idx) {
             clone.remove();
         });
     }
-    // Override Close (X button) to only close the editor modal
-    {
-        const oldCloseBtn = clone.querySelector("#close-recipe-modal");
-        const newCloseBtn = oldCloseBtn.cloneNode(true);
-        oldCloseBtn.replaceWith(newCloseBtn);
-        newCloseBtn.addEventListener("click", () => {
-            console.log("🛠️ close editor for subrecipe idx:", idx);
-            clone.remove();
-        });
-    }
+    // (Removed: Override Close (X button) to only close the editor modal)
     // Append after all listeners are wired
     modal.appendChild(clone);
     makeDraggable(clone);
@@ -195,6 +189,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Recipe Inputs
     const recipeModal = document.getElementById("recipe-modal");
+    // Make the main recipe dialog draggable (not the overlay)
+    const mainRecipeCard = recipeModal.querySelector(".edit-recipe-card");
+    if (mainRecipeCard) {
+        makeDraggable(mainRecipeCard);
+    }
     const modalTitle = document.getElementById("recipe-modal-title");
     const recipeTitleEl = document.getElementById("recipe-title");
     const recipeCategoryEl = document.getElementById("recipe-category");
@@ -717,6 +716,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!modal) return;
             console.log("🔥 add-sub-recipe-btn clicked");
             const cloneCard = subrecipeEditorTemplate.cloneNode(true);
+            // Remove the “X” close button from new sub-recipe modal
+            const closeBtn = cloneCard.querySelector("#close-recipe-modal");
+            if (closeBtn) closeBtn.remove();
             if (!cloneCard) return;
             cloneCard.id = "subrecipe-card-" + Date.now();
             cloneCard.classList.add("subrecipe-modal-card");

@@ -10,7 +10,8 @@ function generateRecipeId() {
  */
 function setSubrecipe(idx, subrecipe) {
   if (typeof idx === 'number') {
-    activeSubrecipes[idx] = subrecipe;
+    const prev = activeSubrecipes[idx] || {};
+    activeSubrecipes[idx] = { ...prev, ...subrecipe, id: subrecipe.id || prev.id };
   } else {
     activeSubrecipes.push(subrecipe);
   }
@@ -104,6 +105,7 @@ function openSubrecipeEditor(idx) {
     newSave.addEventListener("click", () => {
         console.log("🛠️ saving subrecipe idx:", idx);
         setSubrecipe(idx, {
+            id: activeSubrecipes[idx]?.id,
             title: clone.querySelector("#recipe-title").value.trim(),
             category: clone.querySelector("#recipe-category").value.trim(),
             ingredients: extractListItems(ingList),
@@ -129,6 +131,8 @@ function openSubrecipeEditor(idx) {
     // Append after all listeners are wired
     modal.appendChild(clone);
     makeDraggable(clone);
+    // Center any edit cards that haven't been manually moved yet
+    centerOpenCards(modal, '.edit-recipe-card, .subrecipe-modal-card');
 }
 
 /**
@@ -600,7 +604,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 li.innerHTML = `Make: <span class="clickable-title">${title}</span>`;
                 li.style.cursor = "pointer";
                 li.addEventListener("click", () => {
-                    const subId = recipe.subrecipeIds?.[idx];
+                    const subId = (recipe.subrecipeIds || []).find(id => {
+                        const r = recipeData.recipes.find(x => x.id === id);
+                        return r && r.title === title;
+                    });
                     if (!subId) return;
                     const sub = recipeData.recipes.find(r => r.id === subId);
                     if (!sub) return;
@@ -626,6 +633,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     `;
                     subList.appendChild(subCard);
                     makeDraggable(subCard);
+                    // Center any view cards that haven't been manually moved yet
+                    centerOpenCards(document.getElementById('view-recipe-modal'), '.view-recipe-card');
                 });
             }
         });
@@ -807,9 +816,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 existing.remove();
                 return;
             }
-    // Append cloned card to modal flex container
-    modal.appendChild(cloneCard);
-    makeDraggable(cloneCard);
+            // Append cloned card to modal flex container
+            modal.appendChild(cloneCard);
+            makeDraggable(cloneCard);
+            // Center any edit cards that haven't been manually moved yet
+            centerOpenCards(modal, '.edit-recipe-card, .subrecipe-modal-card');
         });
     }
 
@@ -919,7 +930,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const ingredients = extractListItems(clone.querySelector("#recipe-ingredients-list")) || [];
           const instructions = extractListItems(clone.querySelector("#recipe-instructions-list")) || [];
           if (title) {
-            activeSubrecipes[idx] = { title, category, ingredients, instructions };
+            activeSubrecipes[idx] = { id: activeSubrecipes[idx]?.id, title, category, ingredients, instructions };
             renderSubrecipesPreview();
           }
           existing.remove();
@@ -937,22 +948,93 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
+// --- Centering layout for newly-opened draggable cards ---
+function getCardSize(card) {
+  const prevLeft = card.style.left;
+  const prevTop = card.style.top;
+  const prevPos = card.style.position;
+
+  // Ensure measurable
+  if (!prevPos) card.style.position = 'absolute';
+  if (!prevLeft) card.style.left = '0px';
+  if (!prevTop) card.style.top = '0px';
+
+  const rect = card.getBoundingClientRect();
+  return { w: rect.width || 360, h: rect.height || 420 };
+}
+
+function centerOpenCards(rootEl, cardSelector) {
+  if (!rootEl) return;
+
+  const cards = Array.from(rootEl.querySelectorAll(cardSelector))
+    // only reposition cards that the user hasn't moved
+    .filter(c => c && c.offsetParent !== null && c.dataset.userMoved !== '1');
+
+  const n = cards.length;
+  if (!n) return;
+
+  const spacing = 32;
+  const margin = 24;
+
+  // Measure each card (allows different widths)
+  const sizes = cards.map(getCardSize);
+  const totalW = sizes.reduce((sum, s) => sum + s.w, 0) + (n - 1) * spacing;
+  const maxH = sizes.reduce((m, s) => Math.max(m, s.h), 0);
+
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  const startX = Math.max(margin, Math.round((vw - totalW) / 2));
+  const startY = Math.max(margin, Math.round((vh - maxH) / 2));
+
+  let x = startX;
+  cards.forEach((card, i) => {
+    const { w, h } = sizes[i];
+
+    card.style.position = 'absolute';
+    card.style.left = x + 'px';
+    // vertically center each card within the row's max height
+    card.style.top = (startY + Math.round((maxH - h) / 2)) + 'px';
+
+    x += w + spacing;
+  });
+}
+
 // --- Add CSS for subrecipe card and modal side-by-side layout ---
 // This block injects styles only once
 // Helper to make elements draggable
 function makeDraggable(el) {
+    // Draggable cards use absolute positioning for free movement
     el.style.position = 'absolute';
     let isDragging = false;
     let offsetX = 0, offsetY = 0;
+    let downX = 0, downY = 0;
+    let moved = false;
+
     el.addEventListener('mousedown', e => {
         isDragging = true;
+        moved = false;
+        downX = e.clientX;
+        downY = e.clientY;
         offsetX = e.clientX - el.offsetLeft;
         offsetY = e.clientY - el.offsetTop;
         el.style.cursor = 'move';
         el.style.zIndex = '1000';
     });
+
     document.addEventListener('mousemove', e => {
         if (!isDragging) return;
+
+        // Only consider it "user moved" after a small drag threshold (prevents clicks from locking layout)
+        if (!moved) {
+            const dx = Math.abs(e.clientX - downX);
+            const dy = Math.abs(e.clientY - downY);
+            if (dx > 3 || dy > 3) {
+                moved = true;
+                el.dataset.userMoved = '1';
+            }
+        }
+
         el.style.left = (e.clientX - offsetX) + 'px';
         el.style.top = (e.clientY - offsetY) + 'px';
     });

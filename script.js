@@ -295,6 +295,7 @@ document.addEventListener("DOMContentLoaded", () => {
     window.CookbookStore = window.CookbookStore || {};
     window.CookbookStore.data = recipeData;
     let editIndex = null;
+    let currentWorkspaceViewRecipeId = null;
 
     const openTrashBtn = document.getElementById("open-trash-btn");
     const recentlyDeleted = document.getElementById("recently-deleted");
@@ -500,14 +501,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Add event listeners for viewing deleted recipes
         document.querySelectorAll(".deleted-item").forEach((item, i) => {
-            item.addEventListener("mouseenter", () => openViewRecipeModal(i, true));
+            item.addEventListener("mouseenter", () => openViewRecipeModal(i, true, true));
             item.addEventListener("mouseleave", () => {
-                document.getElementById("view-recipe-modal").classList.add("hidden");
+                const vm = document.getElementById("view-recipe-modal");
+                if (vm) {
+                    vm.classList.add("hidden");
+                    vm.style.pointerEvents = "auto"; // reset
+                }
             });
         });
 
         recentlyDeleted.addEventListener("mouseleave", () => {
-            document.getElementById("view-recipe-modal").classList.add("hidden");
+            const vm = document.getElementById("view-recipe-modal");
+            if (vm) {
+                vm.classList.add("hidden");
+                vm.style.pointerEvents = "auto"; // reset
+            }
         });
     }
 
@@ -644,6 +653,20 @@ document.addEventListener("DOMContentLoaded", () => {
         // Removed: manual sub-recipe toggle click handlers (now handled by event delegation)
 
         recipeModal.classList.remove("hidden");
+
+        // Always reopen in the default centered state (as if no sub-recipe/view cards were opened)
+        const mainCard = recipeModal.querySelector(".edit-recipe-card");
+        if (mainCard) {
+            mainCard.dataset.userMoved = "0";
+            mainCard.style.left = "";
+            mainCard.style.top = "";
+        }
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                centerOpenCards(recipeModal, ".edit-recipe-card, .subrecipe-modal-card, .view-recipe-card");
+            });
+        });
     }
 
     // Helper function to render the edit list with subheadings
@@ -660,14 +683,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function closeRecipeModal() {
         recipeModal.classList.add("hidden");
+
+        // Reset subrecipe working set when closing (cancel means discard workspace state)
+        activeSubrecipes = [];
+        currentWorkspaceViewRecipeId = null;
+
         // Remove any auxiliary cards so they don't persist between modal opens
         document.getElementById("subrecipe-picker-card")?.remove();
         document.getElementById("create-subrecipe-card")?.remove();
-        // Also remove any leftover subrecipe editor cards if any exist
-        recipeModal.querySelectorAll(".subrecipe-modal-card").forEach(el => {
-            // keep the main editor card (it has class edit-recipe-card but no id match)
-            if (el.id !== "") el.remove();
-        });
+
+        // Remove any leftover subrecipe editor cards (e.g. #subrecipe-edit-*)
+        recipeModal.querySelectorAll(".subrecipe-modal-card").forEach(el => el.remove());
+
+        // Remove any workspace view cards opened inside edit mode
+        recipeModal.querySelectorAll("[id^='edit-workspace-view-']").forEach(el => el.remove());
+        recipeModal.querySelectorAll(".view-recipe-card").forEach(el => el.remove());
+
+        // Reset the main edit card so next open starts from the default centered layout
+        const mainCard = recipeModal.querySelector(".edit-recipe-card");
+        if (mainCard) {
+            mainCard.dataset.userMoved = "0";
+            mainCard.style.left = "";
+            mainCard.style.top = "";
+        }
     }
 
     // --- Subrecipe attach/create (main edit modal) ---
@@ -782,10 +820,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const recipe = recipeData.recipes.find(r => r.id === recipeId);
         if (!recipe) return;
 
+        // track the most recently opened workspace view card
+        currentWorkspaceViewRecipeId = recipeId;
+
         // toggle if already open
         const existing = modal.querySelector(`#edit-workspace-view-${recipe.id}`);
         if (existing) {
             existing.remove();
+            if (currentWorkspaceViewRecipeId === recipeId) currentWorkspaceViewRecipeId = null;
             // Re-center remaining cards (old behavior)
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
@@ -818,6 +860,7 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
             e.stopPropagation();
             card.remove();
+            if (currentWorkspaceViewRecipeId === recipeId) currentWorkspaceViewRecipeId = null;
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     centerOpenCards(modal, ".edit-recipe-card, .subrecipe-modal-card, .view-recipe-card");
@@ -881,6 +924,10 @@ document.addEventListener("DOMContentLoaded", () => {
     function openSubrecipePicker() {
         const modal = document.getElementById("recipe-modal");
         if (!modal) return;
+
+        // Replace any open workspace VIEW cards with the picker (close all view cards)
+        modal.querySelectorAll('[id^="edit-workspace-view-"]').forEach(el => el.remove());
+        currentWorkspaceViewRecipeId = null;
 
         const existing = modal.querySelector("#subrecipe-picker-card");
         if (existing) { existing.remove(); return; }
@@ -1021,6 +1068,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
         saveRecipes();
+        updateCategoryFilter();
         renderRecipes();
         closeRecipeModal();
     }
@@ -1035,7 +1083,7 @@ document.addEventListener("DOMContentLoaded", () => {
         recentlyDeleted.classList.remove("open");
     }
 
-    function openViewRecipeModal(index, isDeleted = false) {
+    function openViewRecipeModal(index, isDeleted = false, isHoverPreview = false) {
         const list = isDeleted ? deletedRecipes : recipeData.recipes;
         console.log(`Opening modal for ${isDeleted ? "deleted" : "active"} recipe at index: ${index}`);
 
@@ -1057,6 +1105,9 @@ document.addEventListener("DOMContentLoaded", () => {
         let modal = document.getElementById("view-recipe-modal");
         // Clear modal
         modal.innerHTML = "";
+
+        // Hover preview should not steal the mouse (prevents flicker)
+        modal.style.pointerEvents = isHoverPreview ? "none" : "auto";
 
         // Create modal-wrapper container
         let wrapper = document.createElement("div");
@@ -1147,6 +1198,7 @@ document.addEventListener("DOMContentLoaded", () => {
         saveRecipes();
 
         // ✅ Re-render both lists
+        updateCategoryFilter();
         renderRecipes();
         renderDeletedRecipes();
     }
@@ -1172,6 +1224,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const vm = document.getElementById("view-recipe-modal");
         if (e.target === vm) {
             vm.classList.add("hidden");
+            vm.style.pointerEvents = "auto";
             document.getElementById("recipe-modal")?.classList.remove("edit-under-view");
         }
     });
@@ -1263,6 +1316,7 @@ document.addEventListener("DOMContentLoaded", () => {
             deletedRecipes.splice(index, 1);
             saveDeletedRecipes();
             saveRecipes();
+            updateCategoryFilter();
             renderRecipes();
             renderDeletedRecipes();
             confirmModal.classList.add("hidden");
@@ -1429,6 +1483,13 @@ function makeDraggable(el) {
     let moved = false;
 
     el.addEventListener('mousedown', e => {
+        // Don't start dragging when interacting with form controls / buttons / links
+        // (prevents tiny mouse-moves from shifting modal positions when clicking)
+        const interactive = e.target.closest(
+            'button, input, textarea, select, option, label, a, .close-btn, .edit-btn, .delete-btn'
+        );
+        if (interactive) return;
+        if (e.target && e.target.isContentEditable) return;
         isDragging = true;
         moved = false;
         downX = e.clientX;
@@ -1504,6 +1565,21 @@ if (!document.getElementById("subrecipe-card-style")) {
   position: absolute;
   z-index: 3500;
 }
+
+/* EDIT-workspace view cards: override global negative margins that cause text overlap */
+#recipe-modal .view-recipe-card ul {
+  margin-top: 6px !important;
+  padding-left: 20px;
+}
+#recipe-modal .view-recipe-card .subheading {
+  margin: 10px 0 4px 0 !important;
+  padding-top: 0 !important;
+  margin-left: 0 !important;
+}
+#recipe-modal .view-recipe-card h3 {
+  margin-top: 14px;
+}
+
 .subrecipe-card {
     background: #fff;
     border: 1px solid #ccc;
